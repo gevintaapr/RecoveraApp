@@ -1,5 +1,7 @@
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:http/http.dart' as http;
 
 import '../models/listing_model.dart';
@@ -10,11 +12,18 @@ import 'session_service.dart';
 // ApiService = SATU class berisi static method (pola Modul V).
 // Semua pemanggilan backend lewat sini; screen tidak memanggil http langsung.
 class ApiService {
+  // Alamat laptop yang menjalankan backend, di jaringan Wi-Fi yang sama dengan HP.
+  // Cek di laptop dengan `ipconfig` (IPv4 Address). Ganti bila pindah Wi-Fi.
+  // Untuk emulator Android, ganti menjadi '10.0.2.2'.
+  static const String _ipLaptop = '192.168.18.135';
+
   // Satu-satunya tempat alamat server.
-  // 10.0.2.2 = alamat komputer sendiri bila dibuka dari emulator Android.
-  // Untuk HP fisik, ganti dengan IP laptop di jaringan yang sama (mis. http://192.168.1.10:8000)
-  // atau alamat ngrok saat demo.
-  static const String baseUrl = 'http://10.0.2.2:8000';
+  // - Chrome (web) / Windows desktop -> backend ada di komputer yang sama -> localhost.
+  // - HP Android -> lewat IP laptop.
+  static final String baseUrl =
+      (kIsWeb || defaultTargetPlatform == TargetPlatform.windows)
+          ? 'http://localhost:8000'
+          : 'http://$_ipLaptop:8000';
 
   // ===== HELPER (dipakai semua method di bawah) =====
 
