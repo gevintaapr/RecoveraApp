@@ -34,7 +34,9 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   Future<void> _muatUlang() async {
     final Future<List<OrderModel>> permintaanBaru = ApiService.ambilDaftarPesanan();
-    setState(() => _futurePesanan = permintaanBaru);
+    setState(() {
+      _futurePesanan = permintaanBaru;
+    });
     try {
       await permintaanBaru;
     } catch (_) {

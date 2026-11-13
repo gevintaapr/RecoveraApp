@@ -38,7 +38,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
   Future<void> _muatUlang() async {
     final Future<List<ListingModel>> permintaanBaru =
         ApiService.ambilDaftarListing(kataKunci: pencarianController.text.trim());
-    setState(() => _futureListing = permintaanBaru);
+    // Pakai kurung kurawal: isi setState tidak boleh mengembalikan Future.
+    setState(() {
+      _futureListing = permintaanBaru;
+    });
     // Ditunggu supaya ikon RefreshIndicator berhenti setelah data datang.
     try {
       await permintaanBaru;

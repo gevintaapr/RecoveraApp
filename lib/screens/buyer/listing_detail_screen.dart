@@ -38,7 +38,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   Future<void> _muatUlang() async {
     final Future<ListingModel> permintaanBaru =
         ApiService.ambilDetailListing(widget.idListing);
-    setState(() => _futureDetail = permintaanBaru);
+    setState(() {
+      _futureDetail = permintaanBaru;
+    });
     try {
       await permintaanBaru;
     } catch (_) {
