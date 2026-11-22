@@ -2,92 +2,97 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Widget Indikator Langkah Upload Stok Penjual (T7):
-// Langkah 1: Faktur -> Langkah 2: Data Produk -> Langkah 3: Harga & Terbit
+// Stepper upload stok penjual: 1 Faktur, 2 Data, 3 Harga, 4 Terbit.
+// Langkah sebelum langkahAktif = selesai (centang), langkahAktif = biru, sisanya abu.
 class IndikatorLangkah extends StatelessWidget {
-  final int langkahAktif; // 1, 2, atau 3
+  final int langkahAktif; // 1 sampai 4
 
   const IndikatorLangkah({super.key, required this.langkahAktif});
 
+  static const List<String> _daftarLangkah = ['Faktur', 'Data', 'Harga', 'Terbit'];
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppTheme.jarakSedang,
-        vertical: AppTheme.jarakKecil,
-      ),
-      margin: const EdgeInsets.only(bottom: AppTheme.jarakSedang),
-      decoration: BoxDecoration(
-        color: AppTheme.warnaPermukaan,
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        border: Border.all(color: AppTheme.warnaGaris),
-      ),
-      child: Row(
-        children: [
-          _buildItemLangkah(nomor: 1, label: 'Faktur', aktif: langkahAktif >= 1, selesai: langkahAktif > 1),
-          _buildGarisPenghubung(aktif: langkahAktif > 1),
-          _buildItemLangkah(nomor: 2, label: 'Data Produk', aktif: langkahAktif >= 2, selesai: langkahAktif > 2),
-          _buildGarisPenghubung(aktif: langkahAktif > 2),
-          _buildItemLangkah(nomor: 3, label: 'Harga & Terbit', aktif: langkahAktif >= 3, selesai: false),
-        ],
-      ),
+    final List<Widget> isi = [];
+    for (int i = 0; i < _daftarLangkah.length; i++) {
+      final int nomor = i + 1;
+      if (i > 0) isi.add(_GarisPenghubung(selesai: nomor <= langkahAktif));
+      isi.add(_ItemLangkah(
+        nomor: nomor,
+        label: _daftarLangkah[i],
+        aktif: nomor == langkahAktif,
+        selesai: nomor < langkahAktif,
+      ));
+    }
+    return Semantics(
+      label: 'Langkah $langkahAktif dari ${_daftarLangkah.length}: ${_daftarLangkah[langkahAktif - 1]}',
+      child: ExcludeSemantics(child: Row(children: isi)),
     );
   }
+}
 
-  Widget _buildItemLangkah({
-    required int nomor,
-    required String label,
-    required bool aktif,
-    required bool selesai,
-  }) {
-    final Color warnaLingkaran = aktif ? AppTheme.warnaUtama : AppTheme.warnaGaris;
-    final Color warnaTeks = aktif ? AppTheme.warnaUtama : AppTheme.warnaTeksRedup;
+class _ItemLangkah extends StatelessWidget {
+  final int nomor;
+  final String label;
+  final bool aktif;
+  final bool selesai;
 
+  const _ItemLangkah({required this.nomor, required this.label, required this.aktif, required this.selesai});
+
+  @override
+  Widget build(BuildContext context) {
+    final bool terisi = aktif || selesai;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 28,
-          height: 28,
+          width: AppTheme.ukuranLingkaranLangkah,
+          height: AppTheme.ukuranLingkaranLangkah,
+          alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: selesai ? AppTheme.warnaUtama : (aktif ? AppTheme.warnaUtama.withValues(alpha: 0.15) : AppTheme.warnaLatar),
-            border: Border.all(color: warnaLingkaran, width: 2),
+            color: terisi ? AppTheme.warnaUtama : AppTheme.warnaPermukaan,
+            border: terisi ? null : Border.all(color: AppTheme.warnaGarisTegas, width: 2),
           ),
-          child: Center(
-            child: selesai
-                ? const Icon(Icons.check, size: 16, color: Colors.white)
-                : Text(
-                    '$nomor',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: aktif ? AppTheme.warnaUtama : AppTheme.warnaTeksRedup,
-                    ),
+          child: selesai
+              ? const Icon(Icons.check, size: AppTheme.fontSubjudul, color: AppTheme.warnaPermukaan)
+              : Text(
+                  '$nomor',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontNormal,
+                    fontWeight: FontWeight.w800,
+                    color: terisi ? AppTheme.warnaPermukaan : AppTheme.warnaTeksRedup,
                   ),
-          ),
+                ),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: AppTheme.jarakMini),
         Text(
           label,
           style: TextStyle(
-            fontSize: 11,
-            fontWeight: aktif ? FontWeight.bold : FontWeight.normal,
-            color: warnaTeks,
+            fontSize: AppTheme.fontLabel,
+            fontWeight: terisi ? FontWeight.w700 : FontWeight.w600,
+            color: terisi ? AppTheme.warnaUtama : AppTheme.warnaTeksRedup,
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildGarisPenghubung({required bool aktif}) {
+class _GarisPenghubung extends StatelessWidget {
+  final bool selesai;
+
+  const _GarisPenghubung({required this.selesai});
+
+  @override
+  Widget build(BuildContext context) {
     return Expanded(
       child: Container(
         height: 2,
-        margin: const EdgeInsets.only(bottom: 16, left: 4, right: 4),
-        color: aktif ? AppTheme.warnaUtama : AppTheme.warnaGaris,
+        // Sejajarkan garis dengan tengah lingkaran, bukan dengan label.
+        margin: const EdgeInsets.only(bottom: AppTheme.fontLabel + AppTheme.jarakKecil),
+        color: selesai ? AppTheme.warnaUtama : AppTheme.warnaGarisTegas,
       ),
     );
   }
 }
-

@@ -2,42 +2,79 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Tombol utama yang dipakai ulang di banyak layar.
+// Tombol utama yang dipakai ulang di banyak layar, berlatar gradien biru.
 // Saat sedangMemuat = true, tombol menampilkan loading (buffer) dan tidak bisa
 // ditekan, supaya proses tidak terkirim dua kali. onPressed null = tombol nonaktif.
 class PrimaryButton extends StatelessWidget {
   final String teks;
   final VoidCallback? onPressed;
   final bool sedangMemuat;
+  final IconData? ikon;
 
   const PrimaryButton({
     super.key,
     required this.teks,
     required this.onPressed,
     this.sedangMemuat = false,
+    this.ikon,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: AppTheme.tinggiTombol,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.warnaUtama,
-          foregroundColor: AppTheme.warnaPermukaan,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppTheme.radius),
+    final bool aktif = onPressed != null && !sedangMemuat;
+    // Saat memuat tetap biru supaya tidak terlihat seperti tombol mati.
+    final bool tampilBiru = aktif || sedangMemuat;
+    final Color warnaIsi = tampilBiru ? AppTheme.warnaPermukaan : AppTheme.warnaTeksRedup;
+
+    return Semantics(
+      button: true,
+      enabled: aktif,
+      child: SizedBox(
+        width: double.infinity,
+        height: AppTheme.tinggiTombol,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            gradient: tampilBiru ? AppTheme.gradienUtama : null,
+            color: tampilBiru ? null : AppTheme.warnaGarisTegas,
+            borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
+          ),
+          child: Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
+              onTap: aktif ? onPressed : null,
+              child: Center(
+                child: sedangMemuat
+                    ? const SizedBox(
+                        width: AppTheme.ikonSedang,
+                        height: AppTheme.ikonSedang,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.warnaPermukaan),
+                      )
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (ikon != null) ...[
+                            Icon(ikon, size: AppTheme.ikonKecil, color: warnaIsi),
+                            const SizedBox(width: AppTheme.jarakKecil),
+                          ],
+                          Flexible(
+                            child: Text(
+                              teks,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: AppTheme.fontSedang,
+                                fontWeight: FontWeight.w700,
+                                color: warnaIsi,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+            ),
           ),
         ),
-        onPressed: sedangMemuat ? null : onPressed,
-        child: sedangMemuat
-            ? const SizedBox(
-                width: AppTheme.jarakBesar,
-                height: AppTheme.jarakBesar,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(teks, style: const TextStyle(fontSize: AppTheme.fontNormal)),
       ),
     );
   }

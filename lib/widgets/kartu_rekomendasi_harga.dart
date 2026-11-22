@@ -6,7 +6,9 @@ import '../services/api_service.dart';
 import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import 'baris_info.dart';
+import 'chip_lembut.dart';
 import 'dialog_memuat.dart';
+import 'kartu_bagian.dart';
 
 // Kartu hasil rekomendasi harga dari server (LightGBM atau rumus cadangan).
 // Kartunya hanya menampilkan; tombol "Terbitkan" ada di layar pemanggil
@@ -19,69 +21,156 @@ class KartuRekomendasiHarga extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
-      child: Padding(
-        padding: const EdgeInsets.all(AppTheme.jarakSedang),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    final bool adaRentang = saran.batasBawah != null && saran.batasAtas != null;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Kartu utama diberi garis biru: ini keputusan yang sedang diminta dari penjual.
+        Card(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusBesar),
+            side: const BorderSide(color: AppTheme.warnaUtama, width: 1.5),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.jarakSedang),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.auto_awesome, color: AppTheme.warnaUtama),
-                const SizedBox(width: AppTheme.jarakKecil),
-                const Expanded(child: Text('Rekomendasi Harga', style: AppTheme.gayaSubjudul)),
-                Chip(
-                  label: Text(saran.dariModelAi ? 'Model AI' : 'Rumus cadangan'),
-                  visualDensity: VisualDensity.compact,
+                Row(
+                  children: [
+                    ChipLembut(
+                      // Sumber ditulis jujur: model atau rumus cadangan dari server.
+                      teks: saran.dariModelAi ? 'Rekomendasi AI · LightGBM' : 'Rekomendasi rumus',
+                      warnaLatar: AppTheme.warnaUtama,
+                      warnaTeks: AppTheme.warnaPermukaan,
+                    ),
+                    const Spacer(),
+                    ChipLembut(
+                      teks: 'Diskon ${saran.persenDiskon.round()}%',
+                      warnaLatar: AppTheme.warnaLatarSukses,
+                      warnaTeks: AppTheme.warnaSukses,
+                    ),
+                  ],
                 ),
+                const SizedBox(height: AppTheme.jarakKecil),
+                const Text('Harga awal lelang', style: TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup)),
+                Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.end,
+                  spacing: AppTheme.jarakKecil,
+                  children: [
+                    Text(
+                      ListingModel.formatRupiah(saran.hargaSaran),
+                      style: AppTheme.gayaJudul.copyWith(color: AppTheme.warnaUtama),
+                    ),
+                    Text('/${draft.satuan}', style: AppTheme.gayaTeksRedup),
+                    Text(ListingModel.formatRupiah(draft.hargaNormal), style: AppTheme.gayaHargaCoret),
+                  ],
+                ),
+                if (saran.alasan.isNotEmpty) ...[
+                  const SizedBox(height: AppTheme.jarakKecil),
+                  Text(saran.alasan, style: AppTheme.gayaTeksRedup),
+                ],
+                if (saran.perluPeringatan) ...[
+                  const SizedBox(height: AppTheme.jarakKecil),
+                  const ChipLembut(
+                    teks: 'Di luar rentang wajar, akan diminta konfirmasi saat terbit',
+                    warnaLatar: AppTheme.warnaLatarPeringatan,
+                    warnaTeks: AppTheme.warnaTeksPeringatan,
+                  ),
+                ],
               ],
             ),
-            const SizedBox(height: AppTheme.jarakKecil),
-            Text('Harga awal lelang', style: AppTheme.gayaTeksRedup),
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              spacing: AppTheme.jarakKecil,
-              runSpacing: 4,
-              children: [
-                Text(ListingModel.formatRupiah(saran.hargaSaran),
-                    style: AppTheme.gayaJudul.copyWith(color: AppTheme.warnaUtama)),
-                Text(ListingModel.formatRupiah(draft.hargaNormal), style: AppTheme.gayaHargaCoret),
-                Text('-${saran.persenDiskon.round()}%',
-                    style: const TextStyle(color: AppTheme.warnaAksen, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const Divider(height: AppTheme.jarakBesar),
+          ),
+        ),
+        if (adaRentang) ...[
+          const SizedBox(height: AppTheme.jarakKecil),
+          KartuBagian(
+            judul: 'Rentang harga yang disarankan',
+            children: [
+              _BatangRentang(bawah: saran.batasBawah!, atas: saran.batasAtas!, harga: saran.hargaSaran),
+            ],
+          ),
+        ],
+        const SizedBox(height: AppTheme.jarakKecil),
+        KartuBagian(
+          judul: 'Aturan lelang Belanda',
+          children: [
             BarisInfo(label: 'Harga minimum', nilai: ListingModel.formatRupiah(draft.hargaMinimum)),
-            if (saran.batasBawah != null && saran.batasAtas != null)
-              BarisInfo(
-                label: 'Rentang wajar',
-                nilai: '${ListingModel.formatRupiah(saran.batasBawah!)} – '
-                    '${ListingModel.formatRupiah(saran.batasAtas!)}',
-              ),
             BarisInfo(label: 'Stok', nilai: '${draft.stok} ${draft.satuan}'),
             BarisInfo(label: 'Kedaluwarsa', nilai: ListingModel.formatTanggal(draft.tanggalKedaluwarsa)),
-            if (saran.alasan.isNotEmpty) ...[
-              const SizedBox(height: AppTheme.jarakKecil),
-              Text(saran.alasan, style: AppTheme.gayaTeksRedup),
-            ],
             const SizedBox(height: AppTheme.jarakKecil),
             const Text(
-              'Setelah terbit, harga turun bertahap otomatis (lelang Belanda) '
-              'dan tidak pernah di bawah harga minimum.',
+              'Setelah terbit, harga turun bertahap otomatis dan tidak pernah di bawah harga minimum.',
               style: TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
             ),
-            if (saran.perluPeringatan)
-              const Padding(
-                padding: EdgeInsets.only(top: AppTheme.jarakKecil),
-                child: Text(
-                  'Harga awal di luar rentang wajar. Anda akan diminta konfirmasi saat menerbitkan.',
-                  style: TextStyle(color: AppTheme.warnaAksen),
-                ),
-              ),
           ],
         ),
-      ),
+      ],
+    );
+  }
+}
+
+// Batang batas bawah - batas atas dari server, dengan titik di posisi harga saran.
+class _BatangRentang extends StatelessWidget {
+  final double bawah;
+  final double atas;
+  final double harga;
+
+  const _BatangRentang({required this.bawah, required this.atas, required this.harga});
+
+  @override
+  Widget build(BuildContext context) {
+    final double posisi = atas <= bawah ? 0.5 : ((harga - bawah) / (atas - bawah)).clamp(0.0, 1.0);
+    const double titik = AppTheme.ikonKecil;
+    return Column(
+      children: [
+        SizedBox(
+          height: titik,
+          child: LayoutBuilder(
+            builder: (context, batas) => Stack(
+              alignment: Alignment.centerLeft,
+              children: [
+                Container(
+                  height: AppTheme.jarakMini,
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.gradienUtama,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusKapsul),
+                  ),
+                ),
+                Positioned(
+                  left: (batas.maxWidth - titik) * posisi,
+                  child: Container(
+                    width: titik,
+                    height: titik,
+                    decoration: BoxDecoration(
+                      color: AppTheme.warnaPermukaan,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: AppTheme.warnaUtama, width: 3),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: AppTheme.jarakKecil),
+        Row(
+          children: [
+            Expanded(child: _labelBatas(ListingModel.formatRupiah(bawah), 'Batas bawah', CrossAxisAlignment.start)),
+            _labelBatas(ListingModel.formatRupiah(atas), 'Batas atas', CrossAxisAlignment.end),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _labelBatas(String nilai, String keterangan, CrossAxisAlignment rata) {
+    return Column(
+      crossAxisAlignment: rata,
+      children: [
+        Text(nilai, style: const TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w800)),
+        Text(keterangan, style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup)),
+      ],
     );
   }
 }

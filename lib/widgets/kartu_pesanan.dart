@@ -7,11 +7,13 @@ import '../screens/buyer/order_detail_screen.dart';
 import '../services/api_service.dart';
 import '../theme/app_theme.dart';
 import 'dialog_memuat.dart';
+import 'primary_button.dart';
 import 'status_badge.dart';
 
-// Kartu satu pesanan untuk Pembeli (T3) dan Penjual (T4).
-// - Pembeli: info faktur ringkas, status, alamat gudang saat siap diambil.
-// - Penjual: tombol aksi cepat langsung di kartu (Siapkan barang, Konfirmasi ambil, Ingatkan pembeli).
+// Kartu satu pesanan untuk Pembeli (T3) dan Penjual (T4):
+// nomor + tanggal + status, produk + total, nama pihak lain, lokasi ambil.
+// Penjual: tombol aksi langsung di kartu (Tandai siap diambil, Konfirmasi
+// sudah diambil, Ingatkan pembeli).
 class KartuPesanan extends StatelessWidget {
   final OrderModel pesanan;
   final bool isPenjual;
@@ -56,10 +58,7 @@ class KartuPesanan extends StatelessWidget {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(pesan),
-          backgroundColor: AppTheme.warnaGalat,
-        ),
+        SnackBar(content: Text(pesan), backgroundColor: AppTheme.warnaGalat),
       );
     }
   }
@@ -71,81 +70,99 @@ class KartuPesanan extends StatelessWidget {
       if (!context.mounted) return;
       Navigator.pop(context); // tutup dialog loading
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengingat pick-up berhasil dikirim ke pembeli!'),
-        ),
+        const SnackBar(content: Text('Pengingat pick-up berhasil dikirim ke pembeli')),
       );
     } catch (e) {
       if (!context.mounted) return;
       Navigator.pop(context); // tutup dialog loading
       final String pesan = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(pesan),
-          backgroundColor: AppTheme.warnaGalat,
-        ),
+        SnackBar(content: Text(pesan), backgroundColor: AppTheme.warnaGalat),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final String? pihakLain =
-        isPenjual ? pesanan.namaPembeli : pesanan.namaPenjual;
-    final bool siapDiambil =
-        pesanan.status == 'in_progress' && pesanan.alamatGudang != null;
+    final String? pihakLain = isPenjual ? pesanan.namaPembeli : pesanan.namaPenjual;
+    final bool siapDiambil = pesanan.status == 'in_progress' && pesanan.alamatGudang != null;
 
-    return Card(
-      color: AppTheme.warnaPermukaan,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-      ),
-      margin: const EdgeInsets.only(bottom: AppTheme.jarakKecil),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppTheme.radius),
-        onTap: () => _bukaDetail(context),
-        child: Padding(
-          padding: const EdgeInsets.all(AppTheme.jarakSedang),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _GambarPesanan(urlGambar: pesanan.urlGambar),
-                  const SizedBox(width: AppTheme.jarakSedang),
-                  Expanded(child: _buatInfo(pihakLain)),
-                ],
-              ),
-              if (siapDiambil) ...[
-                const Divider(height: AppTheme.jarakSedang),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppTheme.jarakKecil),
+      child: Card(
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radius),
+          onTap: () => _bukaDetail(context),
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.jarakSedang),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Icon(
-                      Icons.location_on_outlined,
-                      size: AppTheme.fontSubjudul,
-                      color: AppTheme.warnaUtama,
-                    ),
-                    const SizedBox(width: AppTheme.jarakKecil / 2),
                     Expanded(
                       child: Text(
-                        'Ambil di: ${pesanan.alamatGudang}',
-                        style: const TextStyle(
-                          fontSize: AppTheme.fontKecil,
-                          color: AppTheme.warnaTeks,
-                        ),
+                        'PESANAN #${pesanan.id} · ${ListingModel.formatTanggal(pesanan.dibuatPada)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.gayaLabelKapital,
                       ),
                     ),
+                    StatusBadge(status: pesanan.status, label: pesanan.labelStatus),
                   ],
                 ),
-              ],
-              // Tombol aksi penjual langsung di kartu (T4)
-              if (isPenjual && pesanan.status != 'completed') ...[
                 const SizedBox(height: AppTheme.jarakKecil),
-                _buatAksiPenjual(context),
+                Row(
+                  children: [
+                    _GambarPesanan(urlGambar: pesanan.urlGambar),
+                    const SizedBox(width: AppTheme.jarakSedang),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            pesanan.namaProduk,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700),
+                          ),
+                          Text(
+                            '${pesanan.jumlah} × ${ListingModel.formatRupiah(pesanan.hargaSatuan)}',
+                            style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Text(ListingModel.formatRupiah(pesanan.totalHarga), style: AppTheme.gayaHarga),
+                  ],
+                ),
+                if (pihakLain != null) ...[
+                  const SizedBox(height: AppTheme.jarakKecil),
+                  _PanelPihakLain(nama: pihakLain, sebagaiPembeli: isPenjual),
+                ],
+                if (siapDiambil) ...[
+                  const SizedBox(height: AppTheme.jarakKecil),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(Icons.location_on_outlined, size: AppTheme.ikonKecil, color: AppTheme.warnaUtama),
+                      const SizedBox(width: AppTheme.jarakMini),
+                      Expanded(
+                        child: Text(
+                          'Ambil di: ${pesanan.alamatGudang}',
+                          style: const TextStyle(fontSize: AppTheme.fontKecil),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                // Tombol aksi penjual langsung di kartu (T4).
+                if (isPenjual && pesanan.status != 'completed') ...[
+                  const SizedBox(height: AppTheme.jarakKecil),
+                  _buatAksiPenjual(context),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
@@ -154,115 +171,101 @@ class KartuPesanan extends StatelessWidget {
 
   Widget _buatAksiPenjual(BuildContext context) {
     if (pesanan.status == 'paid') {
-      return SizedBox(
-        width: double.infinity,
-        child: OutlinedButton.icon(
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppTheme.warnaUtama,
-            side: const BorderSide(color: AppTheme.warnaUtama),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(AppTheme.radius),
-            ),
-          ),
-          icon: const Icon(Icons.check_circle_outline, size: 18),
-          label: const Text('Siapkan & Tandai Siap Diambil'),
-          onPressed: () => _ubahStatus(context, 'in_progress'),
-        ),
+      return PrimaryButton(
+        teks: 'Tandai siap diambil',
+        ikon: Icons.check_circle_outline,
+        onPressed: () => _ubahStatus(context, 'in_progress'),
       );
     }
-
     if (pesanan.status == 'in_progress') {
       return Row(
         children: [
           Expanded(
-            flex: 3,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.warnaUtama,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(AppTheme.radius),
-                ),
-              ),
-              icon: const Icon(Icons.done_all_rounded, size: 18),
-              label: const FittedBox(
-                fit: BoxFit.scaleDown,
-                child: Text('Konfirmasi Selesai Diambil'),
-              ),
+            child: PrimaryButton(
+              teks: 'Konfirmasi sudah diambil',
+              ikon: Icons.done_all_rounded,
               onPressed: () => _ubahStatus(context, 'completed'),
             ),
           ),
           const SizedBox(width: AppTheme.jarakKecil),
           IconButton.outlined(
-            tooltip: 'Ingatkan Pembeli untuk Ambil',
-            style: IconButton.styleFrom(
-              side: const BorderSide(color: AppTheme.warnaAksen),
-              foregroundColor: AppTheme.warnaAksen,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radius),
-              ),
+            tooltip: 'Ingatkan pembeli untuk mengambil',
+            constraints: const BoxConstraints(
+              minWidth: AppTheme.tinggiTombol,
+              minHeight: AppTheme.tinggiTombol,
             ),
-            icon: const Icon(Icons.notifications_active_outlined, size: 20),
+            style: IconButton.styleFrom(
+              foregroundColor: AppTheme.warnaAksen,
+              side: const BorderSide(color: AppTheme.warnaGarisTegas),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusTombol)),
+            ),
+            icon: const Icon(Icons.notifications_active_outlined, size: AppTheme.ikonSedang),
             onPressed: () => _ingatkanPembeli(context),
           ),
         ],
       );
     }
-
     return const SizedBox.shrink();
   }
+}
 
-  Widget _buatInfo(String? pihakLain) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Text(
-                pesanan.namaProduk,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: AppTheme.fontNormal,
-                ),
+// Kotak kecil: inisial + nama pembeli (dilihat penjual) atau penjual (dilihat pembeli).
+class _PanelPihakLain extends StatelessWidget {
+  final String nama;
+  final bool sebagaiPembeli;
+
+  const _PanelPihakLain({required this.nama, required this.sebagaiPembeli});
+
+  String get _inisial {
+    final List<String> kata = nama.trim().split(' ').where((k) => k.isNotEmpty).toList();
+    if (kata.isEmpty) return '?';
+    return kata.take(2).map((k) => k[0].toUpperCase()).join();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang, vertical: AppTheme.jarakKecil),
+      decoration: BoxDecoration(
+        color: AppTheme.warnaLatar,
+        borderRadius: BorderRadius.circular(AppTheme.radiusChip),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: AppTheme.ukuranTombolKecil,
+            height: AppTheme.ukuranTombolKecil,
+            alignment: Alignment.center,
+            decoration: const BoxDecoration(color: AppTheme.warnaLatarInfo, shape: BoxShape.circle),
+            child: Text(
+              _inisial,
+              style: const TextStyle(
+                fontSize: AppTheme.fontLabel,
+                fontWeight: FontWeight.w800,
+                color: AppTheme.warnaTeksInfo,
               ),
             ),
-            const SizedBox(width: AppTheme.jarakKecil),
-            StatusBadge(status: pesanan.status, label: pesanan.labelStatus),
-          ],
-        ),
-        const SizedBox(height: AppTheme.jarakKecil / 2),
-        Text(
-          '${pihakLain == null ? '' : '$pihakLain • '}'
-          '${ListingModel.formatTanggal(pesanan.dibuatPada)}',
-          style: const TextStyle(
-            fontSize: AppTheme.fontKecil,
-            color: AppTheme.warnaTeksRedup,
           ),
-        ),
-        Text(
-          '${pesanan.jumlah} x ${ListingModel.formatRupiah(pesanan.hargaSatuan)}',
-          style: const TextStyle(
-            fontSize: AppTheme.fontKecil,
-            color: AppTheme.warnaTeksRedup,
+          const SizedBox(width: AppTheme.jarakKecil),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nama,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w700),
+                ),
+                Text(
+                  sebagaiPembeli ? 'Pembeli · ambil di gudang' : 'Penjual · ambil di gudang',
+                  style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                ),
+              ],
+            ),
           ),
-        ),
-        const SizedBox(height: AppTheme.jarakKecil / 2),
-        const Text(
-          'Total tagihan',
-          style: TextStyle(
-            fontSize: AppTheme.fontKecil,
-            color: AppTheme.warnaTeksRedup,
-          ),
-        ),
-        Text(
-          ListingModel.formatRupiah(pesanan.totalHarga),
-          style: AppTheme.gayaHarga,
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
@@ -274,19 +277,17 @@ class _GambarPesanan extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Widget gambarCadangan = Container(
-      color: AppTheme.warnaGaris,
-      child: const Icon(
-        Icons.inventory_2_outlined,
-        color: AppTheme.warnaTeksRedup,
+    const Widget gambarCadangan = ColoredBox(
+      color: AppTheme.warnaLatarNetral,
+      child: Center(
+        child: Icon(Icons.inventory_2_outlined, size: AppTheme.ikonSedang, color: AppTheme.warnaTeksRedup),
       ),
     );
-
     return ClipRRect(
-      borderRadius: BorderRadius.circular(AppTheme.jarakKecil),
+      borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
       child: SizedBox(
-        width: AppTheme.gambarKartu,
-        height: AppTheme.gambarKartu,
+        width: AppTheme.ukuranTombolIkon,
+        height: AppTheme.ukuranTombolIkon,
         child: (urlGambar == null || urlGambar!.isEmpty)
             ? gambarCadangan
             : Image.network(

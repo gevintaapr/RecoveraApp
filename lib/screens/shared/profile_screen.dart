@@ -3,8 +3,8 @@ import 'package:get/get.dart';
 
 import '../../controllers/notifikasi_controller.dart';
 import '../../models/user_model.dart';
-import '../../routes/app_routes.dart';
 import '../../services/api_service.dart';
+import '../../services/location_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/baris_info.dart';
 import '../../widgets/dialog_memuat.dart';
@@ -89,38 +89,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return RefreshIndicator(
           onRefresh: _muatUlang,
           child: ListView(
-            padding: const EdgeInsets.all(AppTheme.jarakSedang),
+            // Jarak bawah ikut tinggi bar navigasi kaca (extendBody), agar tombol Keluar terlihat.
+            padding: EdgeInsets.fromLTRB(
+              AppTheme.jarakSedang,
+              AppTheme.jarakSedang,
+              AppTheme.jarakSedang,
+              MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
+            ),
             children: [
               _KepalaProfil(pengguna: pengguna),
               const SizedBox(height: AppTheme.jarakBesar),
               _KartuInfo(pengguna: pengguna),
               const SizedBox(height: AppTheme.jarakSedang),
-              Card(
-                color: AppTheme.warnaPermukaan,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
-                child: Column(
-                  children: [
-                    ListTile(
-                      leading: const Icon(Icons.notifications_none),
-                      title: const Text('Notifikasi'),
-                      trailing: const Icon(Icons.chevron_right),
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const NotificationScreen()),
-                      ),
+              // Menu Notifikasi hanya untuk penjual. Pembeli membuka Favorit
+              // dan Notifikasi lewat ikon di AppBar MainShell.
+              if (pengguna.isPenjual) ...[
+                Card(
+                  color: AppTheme.warnaPermukaan,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
+                  child: ListTile(
+                    leading: const Icon(Icons.notifications_none),
+                    title: const Text('Notifikasi'),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationScreen()),
                     ),
-                    // Favorit hanya untuk pembeli; dibuka dengan named route GetX.
-                    if (!pengguna.isPenjual)
-                      ListTile(
-                        leading: const Icon(Icons.favorite_border),
-                        title: const Text('Favorit'),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => Get.toNamed(AppRoutes.favorit),
-                      ),
-                  ],
+                  ),
                 ),
-              ),
-              const SizedBox(height: AppTheme.jarakBesar),
+                const SizedBox(height: AppTheme.jarakBesar),
+              ],
               OutlinedButton.icon(
                 style: OutlinedButton.styleFrom(
                   foregroundColor: AppTheme.warnaGalat,
@@ -169,14 +167,36 @@ class _KepalaProfil extends StatelessWidget {
 }
 
 // Data usaha: penjual (perusahaan, gudang) atau pembeli (jenis usaha).
-class _KartuInfo extends StatelessWidget {
+// Lokasi ditampilkan "Nama Kota (lat, lng)". Nama kota penjual diambil dari
+// profil (kolom city); pembeli tidak punya kolom kota, jadi dicari dari
+// koordinat lewat LocationService.ambilNamaKota() (FutureBuilder).
+class _KartuInfo extends StatefulWidget {
   final UserModel pengguna;
 
   const _KartuInfo({required this.pengguna});
 
   @override
+  State<_KartuInfo> createState() => _KartuInfoState();
+}
+
+class _KartuInfoState extends State<_KartuInfo> {
+  Future<String>? _futureNamaKota;
+
+  @override
+  void initState() {
+    super.initState();
+    final UserModel pengguna = widget.pengguna;
+    if (pengguna.latitude != null && pengguna.longitude != null) {
+      final String? kotaTersimpan = pengguna.kota;
+      _futureNamaKota = (kotaTersimpan != null && kotaTersimpan.isNotEmpty)
+          ? Future<String>.value(kotaTersimpan)
+          : LocationService.ambilNamaKota(pengguna.latitude!, pengguna.longitude!);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final bool adaLokasi = pengguna.latitude != null && pengguna.longitude != null;
+    final UserModel pengguna = widget.pengguna;
     return Card(
       color: AppTheme.warnaPermukaan,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
@@ -193,12 +213,21 @@ class _KartuInfo extends StatelessWidget {
               BarisInfo(label: 'Jenis usaha', nilai: pengguna.jenisUsaha ?? '-'),
             BarisInfo(label: 'Telepon', nilai: pengguna.telepon ?? '-'),
             BarisInfo(label: 'Alamat', nilai: pengguna.alamat ?? '-'),
-            if (pengguna.isPenjual) BarisInfo(label: 'Kota', nilai: pengguna.kota ?? '-'),
-            BarisInfo(
-              label: pengguna.isPenjual ? 'Lokasi gudang' : 'Lokasi usaha',
-              nilai: adaLokasi
-                  ? '${pengguna.latitude!.toStringAsFixed(4)}, ${pengguna.longitude!.toStringAsFixed(4)}'
-                  : '-',
+            FutureBuilder<String>(
+              future: _futureNamaKota,
+              builder: (context, snapshot) {
+                String nilai = '-';
+                if (_futureNamaKota != null) {
+                  nilai = snapshot.hasData
+                      ? LocationService.formatLokasi(
+                          snapshot.data!, pengguna.latitude!, pengguna.longitude!)
+                      : 'Mendeteksi kota...';
+                }
+                return BarisInfo(
+                  label: pengguna.isPenjual ? 'Lokasi gudang' : 'Lokasi usaha',
+                  nilai: nilai,
+                );
+              },
             ),
           ],
         ),

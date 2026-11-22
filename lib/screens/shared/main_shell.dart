@@ -5,6 +5,7 @@ import '../../controllers/favorit_controller.dart';
 import '../../controllers/notifikasi_controller.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/bar_navigasi_kaca.dart';
 import '../buyer/catalog_screen.dart';
 import '../seller/dashboard_screen.dart';
 import '../seller/stock_screen.dart';
@@ -44,6 +45,9 @@ class _MainShellState extends State<MainShell> {
 
   bool get isPenjual => widget.peran == 'seller';
 
+  // Tab pertama (Katalog / Dasbor) punya header gelombang sendiri.
+  bool get _pakaiHeaderSendiri => _selectedIndex == 0;
+
   // Judul tab sesuai peran (panduan 3.2 dan 3.3).
   List<String> get _judulTab => isPenjual
       ? ['Dasbor', 'Stok', 'Profil']
@@ -76,25 +80,33 @@ class _MainShellState extends State<MainShell> {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(_judulTab[_selectedIndex]),
-          actions: [
-            // Ikon Favorit + badge jumlah, hanya untuk pembeli.
-            if (!isPenjual) const _IkonFavorit(),
-            const _IkonNotifikasi(),
-          ],
-        ),
+        // Katalog & Dasbor punya header gelombang sendiri (berisi lonceng, dan
+        // favorit untuk pembeli), jadi AppBar hanya dipakai di tab lain.
+        appBar: _pakaiHeaderSendiri
+            ? null
+            : AppBar(
+                title: Text(_judulTab[_selectedIndex]),
+                actions: [
+                  // Ikon Favorit + badge jumlah, hanya untuk pembeli.
+                  if (!isPenjual) const _IkonFavorit(),
+                  const _IkonNotifikasi(),
+                ],
+              ),
+        // extendBody: isi layar tergulir di belakang bar navigasi kaca.
+        // Setiap tab memberi jarak bawah setinggi bar (MediaQuery.paddingOf).
+        extendBody: true,
         body: _pages[_selectedIndex],
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: AppTheme.warnaUtama,
-          onTap: _pindahTab,
-          items: List.generate(
-            _judulTab.length,
-            (i) => BottomNavigationBarItem(
-              icon: Icon(_ikonTab[i]),
-              label: _judulTab[i],
+        bottomNavigationBar: BarNavigasiKaca(
+          child: BottomNavigationBar(
+            currentIndex: _selectedIndex,
+            onTap: _pindahTab,
+            items: List.generate(
+              _judulTab.length,
+              (i) => BottomNavigationBarItem(
+                icon: Icon(_ikonTab[i], size: AppTheme.ikonSedang),
+                activeIcon: BarNavigasiKaca.ikonAktif(_ikonTab[i]),
+                label: _judulTab[i],
+              ),
             ),
           ),
         ),

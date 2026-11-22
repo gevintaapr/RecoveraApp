@@ -9,9 +9,10 @@ import '../../models/price_advice_model.dart';
 import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_bar_upload.dart';
+import '../../widgets/bar_bawah_kaca.dart';
 import '../../widgets/dialog_memuat.dart';
 import '../../widgets/form_data_produk.dart';
-import '../../widgets/indikator_langkah.dart';
 import '../../widgets/kartu_rekomendasi_harga.dart';
 import '../../widgets/kartu_review_upload.dart';
 import '../../widgets/pilih_foto.dart';
@@ -272,12 +273,12 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                               size: 18,
                               color: AppTheme.warnaAksen,
                             ),
-                            SizedBox(width: 6),
+                            SizedBox(width: AppTheme.jarakKecil),
                             Expanded(
                               child: Text(
                                 'Peringatan: Harga berada di luar rentang saran AI. Anda akan diminta menyetujui konfirmasi saat menerbitkan.',
                                 style: TextStyle(
-                                  fontSize: 11,
+                                  fontSize: AppTheme.fontKecil,
                                   color: AppTheme.warnaAksen,
                                 ),
                               ),
@@ -373,32 +374,50 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool tahapForm = _draftServer == null;
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          _draftServer == null
-              ? 'Langkah 2: Data Produk'
-              : 'Langkah 3: Harga & Terbit',
+      appBar: AppBarUpload(langkahAktif: tahapForm ? 2 : 3),
+      body: tahapForm ? _buatForm() : _buatTahapTerbit(),
+      bottomNavigationBar: BarBawahKaca(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(AppTheme.tinggiTombol)),
+                onPressed: _sedangMemproses
+                    ? null
+                    : (tahapForm ? _simpanDraftLokal : _bukaDialogUbahHargaAwal),
+                child: Text(tahapForm ? 'Simpan draft' : 'Atur manual'),
+              ),
+            ),
+            const SizedBox(width: AppTheme.jarakKecil),
+            Expanded(
+              flex: 2,
+              child: tahapForm
+                  ? PrimaryButton(
+                      teks: 'Lanjut ke harga',
+                      sedangMemuat: _sedangMemproses,
+                      onPressed: _lanjutKeRekomendasi,
+                    )
+                  : PrimaryButton(teks: 'Terbitkan', ikon: Icons.check, onPressed: _terbitkan),
+            ),
+          ],
         ),
       ),
-      body: _draftServer == null ? _buatForm() : _buatTahapTerbit(),
     );
   }
 
-  // Tahap 3: Indikator langkah 3, Kartu Review, Kartu Rekomendasi, Tombol Terbitkan
+  // Tahap 3: ringkasan data, kartu rekomendasi harga; tombol ada di bar bawah.
   Widget _buatTahapTerbit() {
     return ListView(
-      padding: const EdgeInsets.all(AppTheme.jarakSedang),
+      padding: const EdgeInsets.all(AppTheme.jarakTepi),
       children: [
-        const IndikatorLangkah(langkahAktif: 3),
         KartuReviewUpload(
           draft: _draftServer!,
           fotoLokal: _fotoProduk,
           onUbahHargaAwal: _bukaDialogUbahHargaAwal,
         ),
         KartuRekomendasiHarga(saran: _saranHarga!, draft: _draftServer!),
-        const SizedBox(height: AppTheme.jarakBesar),
-        PrimaryButton(teks: 'Terbitkan Sekarang', onPressed: _terbitkan),
         const SizedBox(height: AppTheme.jarakKecil),
         const Text(
           'Belum ingin terbit? Draft ini tetap tersimpan di server dan bisa diedit kembali dari halaman Stok.',
@@ -413,9 +432,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     return Form(
       key: _kunciForm,
       child: ListView(
-        padding: const EdgeInsets.all(AppTheme.jarakSedang),
+        padding: const EdgeInsets.all(AppTheme.jarakTepi),
         children: [
-          const IndikatorLangkah(langkahAktif: 2),
           PilihFoto(
             gambar: _fotoProduk,
             teksKosong: 'Foto produk (wajib)',
@@ -443,17 +461,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
                 setState(() => _penyimpanan = nilai),
             onSatuanBerubah: (nilai) => setState(() => _satuan = nilai),
             onPilihTanggal: _pilihTanggal,
-          ),
-          const SizedBox(height: AppTheme.jarakBesar),
-          PrimaryButton(
-            teks: 'Lanjut: Rekomendasi Harga',
-            sedangMemuat: _sedangMemproses,
-            onPressed: _lanjutKeRekomendasi,
-          ),
-          const SizedBox(height: AppTheme.jarakKecil),
-          OutlinedButton(
-            onPressed: _sedangMemproses ? null : _simpanDraftLokal,
-            child: const Text('Simpan Draft di HP'),
           ),
         ],
       ),

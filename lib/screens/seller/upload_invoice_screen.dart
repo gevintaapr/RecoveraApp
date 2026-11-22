@@ -8,7 +8,10 @@ import '../../models/listing_model.dart';
 import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/indikator_langkah.dart';
+import '../../widgets/app_bar_upload.dart';
+import '../../widgets/bar_bawah_kaca.dart';
+import '../../widgets/chip_lembut.dart';
+import '../../widgets/kartu_bagian.dart';
 import '../../widgets/pilih_foto.dart';
 import '../../widgets/primary_button.dart';
 import '../auth/login_screen.dart';
@@ -16,7 +19,7 @@ import 'listing_form_screen.dart';
 
 // Upload stok langkah 1 (penjual): foto faktur -> OCR.
 // - Pilih foto faktur (kamera/galeri) -> setState menyimpan fotonya.
-// - "Pindai Faktur" -> ApiService.unggahFaktur -> setState menampilkan
+// - "Pindai faktur" -> ApiService.unggahFaktur -> setState menampilkan
 //   daftar barang hasil OCR. Ketuk barang -> form listing terisi otomatis.
 // - OCR gagal / tanpa faktur -> "Isi manual" membuka form kosong.
 // - Bagian bawah: draft yang tersimpan di HP (Hive, ValueListenableBuilder).
@@ -79,36 +82,20 @@ class _UploadInvoiceScreenState extends State<UploadInvoiceScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Upload Stok')),
+      appBar: const AppBarUpload(langkahAktif: 1),
       body: ListView(
-        padding: const EdgeInsets.all(AppTheme.jarakSedang),
+        padding: const EdgeInsets.all(AppTheme.jarakTepi),
         children: [
-          const IndikatorLangkah(langkahAktif: 1),
-          const Text('Langkah 1: Foto faktur', style: AppTheme.gayaSubjudul),
-          const SizedBox(height: AppTheme.jarakKecil / 2),
           const Text(
             'Foto faktur pembelian. Data barang dibaca otomatis (OCR) untuk mengisi form.',
             style: AppTheme.gayaTeksRedup,
           ),
-          const SizedBox(height: AppTheme.jarakSedang),
-          PilihFoto(
-            gambar: _fotoFaktur,
-            teksKosong: 'Belum ada foto faktur',
-            onFotoDipilih: _simpanFoto,
-          ),
-          const SizedBox(height: AppTheme.jarakSedang),
-          PrimaryButton(
-            teks: 'Pindai Faktur',
-            sedangMemuat: _sedangMemindai,
-            onPressed: _fotoFaktur == null ? null : _pindaiFaktur,
-          ),
-          TextButton(
-            onPressed: () => _bukaForm(),
-            child: const Text('Isi manual tanpa faktur'),
-          ),
-          if (_hasilOcr != null) _HasilOcr(hasil: _hasilOcr!, onItemDipilih: (item) => _bukaForm(itemFaktur: item)),
-          const Divider(height: AppTheme.jarakBesar * 2),
-          const Text('Draft tersimpan di HP', style: AppTheme.gayaSubjudul),
+          const SizedBox(height: AppTheme.jarakKecil),
+          PilihFoto(gambar: _fotoFaktur, teksKosong: 'Belum ada foto faktur', onFotoDipilih: _simpanFoto),
+          if (_hasilOcr != null) ...[
+            const SizedBox(height: AppTheme.jarakKecil),
+            _HasilOcr(hasil: _hasilOcr!, onItemDipilih: (item) => _bukaForm(itemFaktur: item)),
+          ],
           const SizedBox(height: AppTheme.jarakKecil),
           // ValueListenableBuilder (Modul VI): daftar ikut berubah sendiri
           // setiap draft disimpan atau dihapus di box Hive 'draft_listings'.
@@ -116,30 +103,56 @@ class _UploadInvoiceScreenState extends State<UploadInvoiceScreen> {
             valueListenable: LocalDbService.pantauDraft(),
             builder: (context, box, child) {
               final List<DraftListingModel> daftarDraft = LocalDbService.ambilSemuaDraft();
-              if (daftarDraft.isEmpty) {
-                return const Text('Belum ada draft.', style: AppTheme.gayaTeksRedup);
-              }
-              return Column(
-                children: daftarDraft
-                    .map((draft) => Card(
-                          child: ListTile(
-                            leading: const Icon(Icons.edit_note),
-                            title: Text(draft.namaProduk),
-                            subtitle: Text('${draft.jumlah} ${draft.satuan} · '
-                                'disimpan ${ListingModel.formatTanggal(draft.waktuDisimpan)}'),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete_outline),
-                              tooltip: 'Hapus draft',
-                              onPressed: () => LocalDbService.hapusDraft(draft.idDraft),
-                            ),
-                            onTap: () => _bukaForm(draft: draft),
-                          ),
-                        ))
-                    .toList(),
+              return KartuBagian(
+                judul: 'Draft tersimpan di HP',
+                children: daftarDraft.isEmpty
+                    ? const [Text('Belum ada draft.', style: AppTheme.gayaTeksRedup)]
+                    : daftarDraft
+                        .map((draft) => ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: const Icon(Icons.edit_note, color: AppTheme.warnaTeksSedang),
+                              title: Text(draft.namaProduk,
+                                  style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700)),
+                              subtitle: Text(
+                                '${draft.jumlah} ${draft.satuan} · '
+                                'disimpan ${ListingModel.formatTanggal(draft.waktuDisimpan)}',
+                                style: const TextStyle(fontSize: AppTheme.fontLabel),
+                              ),
+                              trailing: IconButton(
+                                icon: const Icon(Icons.delete_outline),
+                                tooltip: 'Hapus draft',
+                                onPressed: () => LocalDbService.hapusDraft(draft.idDraft),
+                              ),
+                              onTap: () => _bukaForm(draft: draft),
+                            ))
+                        .toList(),
               );
             },
           ),
         ],
+      ),
+      bottomNavigationBar: BarBawahKaca(
+        child: Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(AppTheme.tinggiTombol)),
+                onPressed: () => _bukaForm(),
+                child: const Text('Isi manual'),
+              ),
+            ),
+            const SizedBox(width: AppTheme.jarakKecil),
+            Expanded(
+              flex: 2,
+              child: PrimaryButton(
+                teks: 'Pindai faktur',
+                ikon: Icons.document_scanner_outlined,
+                sedangMemuat: _sedangMemindai,
+                onPressed: _fotoFaktur == null ? null : _pindaiFaktur,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -155,36 +168,45 @@ class _HasilOcr extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (hasil.ditolak || hasil.daftarItem.isEmpty) {
-      return Card(
-        child: ListTile(
-          leading: const Icon(Icons.error_outline, color: AppTheme.warnaGalat),
-          title: const Text('Faktur tidak terbaca'),
-          subtitle: Text(hasil.alasanDitolak ?? 'Coba foto ulang, atau isi form secara manual.'),
-        ),
+      return KartuBagian(
+        judul: 'Faktur tidak terbaca',
+        children: [
+          Text(
+            hasil.alasanDitolak ?? 'Coba foto ulang, atau isi form secara manual.',
+            style: AppTheme.gayaTeksRedup,
+          ),
+        ],
       );
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return KartuBagian(
+      judul: 'Hasil baca faktur${hasil.namaPemasok == null ? '' : ' · ${hasil.namaPemasok}'}',
+      kanan: const ChipLembut(teks: 'OCR', warnaLatar: AppTheme.warnaLatarInfo, warnaTeks: AppTheme.warnaTeksInfo),
       children: [
-        const SizedBox(height: AppTheme.jarakKecil),
-        Text('Hasil pindai${hasil.namaPemasok == null ? '' : ' · ${hasil.namaPemasok}'}',
-            style: AppTheme.gayaSubjudul),
         if (hasil.pakaiDataContoh)
-          const Text('OCR tidak tersedia, server menampilkan data contoh.',
-              style: TextStyle(color: AppTheme.warnaAksen)),
+          const ChipLembut(
+            teks: 'OCR tidak tersedia, server menampilkan data contoh',
+            warnaLatar: AppTheme.warnaLatarPeringatan,
+            warnaTeks: AppTheme.warnaTeksPeringatan,
+          ),
         const Text('Ketuk barang untuk melanjutkan.', style: AppTheme.gayaTeksRedup),
-        const SizedBox(height: AppTheme.jarakKecil),
-        ...hasil.daftarItem.map((item) => Card(
-              child: ListTile(
-                leading: const Icon(Icons.inventory_2_outlined, color: AppTheme.warnaUtama),
-                title: Text(item.namaProduk),
-                subtitle: Text('${item.jumlah} ${item.satuan} · '
-                    '${ListingModel.formatRupiah(item.hargaNormal)}'
-                    '${item.tanggalKedaluwarsa == null ? '' : ' · exp ${ListingModel.formatTanggal(item.tanggalKedaluwarsa!)}'}'),
-                trailing: Text('${item.persenKeyakinan}%', style: AppTheme.gayaTeksRedup),
-                onTap: () => onItemDipilih(item),
+        ...hasil.daftarItem.map((item) => ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.inventory_2_outlined, color: AppTheme.warnaUtama),
+              title: Text(item.namaProduk,
+                  style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700)),
+              subtitle: Text(
+                '${item.jumlah} ${item.satuan} · ${ListingModel.formatRupiah(item.hargaNormal)}'
+                '${item.tanggalKedaluwarsa == null ? '' : ' · exp ${ListingModel.formatTanggal(item.tanggalKedaluwarsa!)}'}',
+                style: const TextStyle(fontSize: AppTheme.fontLabel),
               ),
+              // Keyakinan rendah ditandai amber supaya penjual mengecek ulang.
+              trailing: ChipLembut(
+                teks: '${item.persenKeyakinan}% yakin',
+                warnaLatar: item.persenKeyakinan < 70 ? AppTheme.warnaLatarPeringatan : AppTheme.warnaLatarNetral,
+                warnaTeks: item.persenKeyakinan < 70 ? AppTheme.warnaTeksPeringatan : AppTheme.warnaTeksSedang,
+              ),
+              onTap: () => onItemDipilih(item),
             )),
       ],
     );

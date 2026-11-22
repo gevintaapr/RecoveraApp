@@ -67,9 +67,14 @@ class TombolIngatkan extends StatelessWidget {
         );
       }
       return OutlinedButton.icon(
+        style: OutlinedButton.styleFrom(
+          minimumSize: const Size.fromHeight(AppTheme.tinggiInput),
+          backgroundColor: aktif ? AppTheme.warnaLatarInfo : AppTheme.warnaPermukaan,
+          foregroundColor: aktif ? AppTheme.warnaTeksInfo : AppTheme.warnaUtama,
+        ),
         onPressed: () => _pasangAtauBatalkan(context, favoritController),
-        icon: Icon(aktif ? Icons.alarm_on : Icons.alarm_add),
-        label: Text(aktif ? 'Pengingat aktif (ketuk untuk batal)' : 'Ingatkan saya'),
+        icon: Icon(aktif ? Icons.notifications_active : Icons.notifications_none, size: AppTheme.ikonKecil),
+        label: Text(aktif ? 'Pengingat aktif, ketuk untuk batal' : 'Ingatkan 30 menit sebelum berakhir'),
       );
     });
   }

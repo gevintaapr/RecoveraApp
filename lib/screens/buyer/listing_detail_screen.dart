@@ -1,24 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 
 import '../../models/favorit_model.dart';
 import '../../models/listing_model.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
-import '../../services/location_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/bar_bawah_beli.dart';
-import '../../widgets/baris_info.dart';
 import '../../widgets/dialog_faktur_sukses.dart';
 import '../../widgets/dialog_memuat.dart';
 import '../../widgets/dialog_pin_transaksi.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/isi_detail_listing.dart';
 import '../../widgets/notifikasi_glass.dart';
-import '../../widgets/price_countdown.dart';
 import '../../widgets/sheet_konfirmasi_beli.dart';
 import '../../widgets/tombol_favorit.dart';
-import '../../widgets/tombol_ingatkan.dart';
 import '../auth/login_screen.dart';
 import 'order_detail_screen.dart';
 
@@ -139,7 +135,27 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         final ListingModel? listing = snapshot.data;
 
         return Scaffold(
-          appBar: AppBar(title: const Text('Detail Produk')),
+          appBar: AppBar(
+            backgroundColor: AppTheme.warnaPermukaan,
+            title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (listing != null)
+                  Text(
+                    [
+                      if (listing.nomorBatch != null) 'Batch ${listing.nomorBatch}',
+                      listing.kategori,
+                    ].join(' · ').toUpperCase(),
+                    style: AppTheme.gayaLabelKapital,
+                  ),
+                const Text('Detail produk'),
+              ],
+            ),
+            actions: [
+              if (listing != null) TombolFavorit(favorit: FavoritModel.dariListing(listing)),
+              const SizedBox(width: AppTheme.jarakKecil),
+            ],
+          ),
           body: () {
             if (snapshot.connectionState == ConnectionState.waiting && listing == null) {
               return const Center(child: CircularProgressIndicator());
@@ -156,7 +172,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             }
             return RefreshIndicator(
               onRefresh: _muatUlang,
-              child: _IsiDetail(listing: listing!, onHargaTurun: _muatUlang),
+              child: IsiDetailListing(listing: listing!, onHargaTurun: _muatUlang),
             );
           }(),
           bottomNavigationBar: listing == null
@@ -169,137 +185,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
         );
       },
-    );
-  }
-}
-
-class _IsiDetail extends StatelessWidget {
-  final ListingModel listing;
-  final VoidCallback onHargaTurun;
-
-  const _IsiDetail({required this.listing, required this.onHargaTurun});
-
-  double? get _jarakKeGudang {
-    if (listing.jarakKm != null) return listing.jarakKm;
-    final Position? lokasi = LocationService.lokasiTerakhir;
-    if (lokasi == null || listing.latGudang == null || listing.lngGudang == null) {
-      return null;
-    }
-    return LocationService.hitungJarakKm(
-      lokasi.latitude,
-      lokasi.longitude,
-      listing.latGudang!,
-      listing.lngGudang!,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final DateTime? turunBerikutnya = listing.waktuTurunBerikutnya;
-    final double? jarakKeGudang = _jarakKeGudang;
-
-    return ListView(
-      padding: const EdgeInsets.all(AppTheme.jarakSedang),
-      children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          child: (listing.urlGambar == null || listing.urlGambar!.isEmpty)
-              ? const _GambarKosong()
-              : Image.network(
-                  listing.urlGambar!,
-                  height: AppTheme.gambarDetail,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => const _GambarKosong(),
-                ),
-        ),
-        const SizedBox(height: AppTheme.jarakSedang),
-        Row(
-          children: [
-            Expanded(child: Text(listing.namaProduk, style: AppTheme.gayaJudul)),
-            TombolFavorit(favorit: FavoritModel.dariListing(listing)),
-          ],
-        ),
-        if (listing.merek != null) Text(listing.merek!, style: AppTheme.gayaTeksRedup),
-        const SizedBox(height: AppTheme.jarakSedang),
-
-        // ----- Harga lelang (dari server) -----
-        const Text('Harga sekarang', style: AppTheme.gayaTeksRedup),
-        Row(
-          children: [
-            Text(
-              ListingModel.formatRupiah(listing.hargaSekarang),
-              style: AppTheme.gayaJudul.copyWith(color: AppTheme.warnaUtama),
-            ),
-            const SizedBox(width: AppTheme.jarakKecil),
-            Text(
-              ListingModel.formatRupiah(listing.hargaNormal),
-              style: AppTheme.gayaHargaCoret,
-            ),
-            const SizedBox(width: AppTheme.jarakKecil),
-            if (listing.diskonPersen > 0)
-              Text(
-                '-${listing.diskonPersen}%',
-                style: const TextStyle(
-                  color: AppTheme.warnaAksen,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-          ],
-        ),
-        const SizedBox(height: AppTheme.jarakKecil),
-        if (turunBerikutnya == null)
-          const Text('Harga sudah mencapai batas terendah', style: AppTheme.gayaTeksRedup)
-        else ...[
-          const SizedBox(height: AppTheme.jarakKecil),
-          PriceCountdown(waktuTurun: turunBerikutnya, onHargaTurun: onHargaTurun),
-          const SizedBox(height: AppTheme.jarakKecil / 2),
-          Text(
-            'Batas terendah: ${ListingModel.formatRupiah(listing.hargaMinimum)}',
-            style: AppTheme.gayaTeksRedup,
-          ),
-        ],
-        const Divider(height: AppTheme.jarakBesar * 2),
-
-        // ----- Spesifikasi Batch & Info Produk (T1) -----
-        BarisInfo(label: 'Stok', nilai: '${listing.stok} ${listing.satuan}'),
-        BarisInfo(label: 'Nomor batch', nilai: listing.nomorBatch ?? '-'),
-        BarisInfo(label: 'Penyimpanan', nilai: listing.jenisPenyimpanan ?? '-'),
-        const BarisInfo(label: 'Metode pengambilan', nilai: 'Ambil di gudang'),
-        BarisInfo(label: 'Kategori', nilai: listing.kategori),
-        BarisInfo(
-          label: 'Kedaluwarsa',
-          nilai: ListingModel.formatTanggal(listing.tanggalKedaluwarsa),
-        ),
-        BarisInfo(
-          label: 'Lelang berakhir',
-          nilai:
-              '${ListingModel.formatTanggal(listing.lelangBerakhir)}, ${ListingModel.formatJam(listing.lelangBerakhir)}',
-        ),
-        BarisInfo(label: 'Penjual', nilai: listing.namaPenjual ?? '-'),
-        BarisInfo(label: 'Kota gudang', nilai: listing.kotaGudang ?? '-'),
-        if (jarakKeGudang != null)
-          BarisInfo(label: 'Jarak ke gudang', nilai: ListingModel.formatJarak(jarakKeGudang)),
-        const SizedBox(height: AppTheme.jarakSedang),
-        TombolIngatkan(favorit: FavoritModel.dariListing(listing)),
-      ],
-    );
-  }
-}
-
-class _GambarKosong extends StatelessWidget {
-  const _GambarKosong();
-
-  @override
-  Widget build(BuildContext context) {
-    return const SizedBox(
-      height: AppTheme.gambarDetail,
-      child: ColoredBox(
-        color: AppTheme.warnaGaris,
-        child: Center(
-          child: Icon(Icons.image_outlined, size: AppTheme.ikonLogo, color: AppTheme.warnaTeksRedup),
-        ),
-      ),
     );
   }
 }

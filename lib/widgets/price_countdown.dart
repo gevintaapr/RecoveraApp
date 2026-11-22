@@ -11,13 +11,15 @@ import '../theme/app_theme.dart';
 class PriceCountdown extends StatefulWidget {
   final DateTime waktuTurun;
   final VoidCallback? onHargaTurun;
-  final bool ringkas; // true = teks kecil untuk kartu katalog
+  final bool ringkas; // true = chip kecil untuk kartu katalog
+  final String? teksHargaMinimum; // panel besar: tampil di sisi kanan bila diisi
 
   const PriceCountdown({
     super.key,
     required this.waktuTurun,
     this.onHargaTurun,
     this.ringkas = false,
+    this.teksHargaMinimum,
   });
 
   @override
@@ -86,39 +88,81 @@ class _PriceCountdownState extends State<PriceCountdown> {
     final bool habis = _sisaWaktu == Duration.zero;
 
     if (widget.ringkas) {
-      return Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.trending_down, size: AppTheme.fontNormal, color: AppTheme.warnaAksen),
-          const SizedBox(width: AppTheme.jarakKecil / 2),
-          Flexible(
-            child: Text(
-              habis ? 'Memperbarui harga...' : 'Turun dalam $_teksSisa',
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakMini, vertical: AppTheme.jarakMini / 4),
+        decoration: BoxDecoration(
+          color: AppTheme.warnaLatarInfo,
+          borderRadius: BorderRadius.circular(AppTheme.radiusChip),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.schedule, size: AppTheme.fontLabel, color: AppTheme.warnaTeksInfo),
+            const SizedBox(width: AppTheme.jarakMini),
+            Text(
+              habis ? 'memperbarui...' : 'turun $_teksSisa',
               maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaAksen),
+              style: const TextStyle(
+                fontSize: AppTheme.fontLabel,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warnaTeksInfo,
+                fontFeatures: [FontFeature.tabularFigures()],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       );
     }
 
+    // Panel besar di detail: gradien navy, semua teks putih (lolos kontras di seluruh gradien).
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(AppTheme.jarakSedang),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang, vertical: AppTheme.jarakSedang),
       decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.warnaAksen),
-        borderRadius: BorderRadius.circular(AppTheme.radius),
+        gradient: AppTheme.gradienHeader,
+        borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
       ),
       child: Row(
         children: [
-          const Icon(Icons.timer_outlined, color: AppTheme.warnaAksen),
-          const SizedBox(width: AppTheme.jarakKecil),
-          const Expanded(child: Text('Harga turun berikutnya dalam', style: AppTheme.gayaTeksRedup)),
-          Text(
-            habis ? 'Memperbarui...' : _teksSisa,
-            style: AppTheme.gayaSubjudul.copyWith(color: AppTheme.warnaAksen),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Harga turun berikutnya dalam',
+                  style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaPermukaan),
+                ),
+                Text(
+                  habis ? 'Memperbarui...' : _teksSisa,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontJudul,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1,
+                    color: AppTheme.warnaPermukaan,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
           ),
+          if (widget.teksHargaMinimum != null)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                const Text(
+                  'Harga minimum',
+                  style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaPermukaan),
+                ),
+                Text(
+                  widget.teksHargaMinimum!,
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontSubjudul,
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.warnaPermukaan,
+                  ),
+                ),
+              ],
+            ),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/kartu_pesanan.dart';
 import '../../widgets/label_data_offline.dart';
 import '../../widgets/ringkasan_pesanan_penjual.dart';
+import '../../widgets/tab_segmen.dart';
 import '../auth/login_screen.dart';
 
 // Tab Pesanan untuk Pembeli (T3) dan Penjual (T4).
@@ -32,8 +33,8 @@ class _OrdersScreenState extends State<OrdersScreen> {
 
   static const Map<String?, String> _labelStatus = {
     null: 'Semua',
-    'paid': 'Menunggu disiapkan',
-    'in_progress': 'Siap diambil',
+    'paid': 'Menunggu',
+    'in_progress': 'Siap ambil',
     'completed': 'Selesai',
   };
 
@@ -110,12 +111,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 AppTheme.jarakSedang,
                 AppTheme.jarakKecil,
               ),
-              child: Text(
-                widget.isPenjual ? 'Kelola Pesanan Masuk' : 'Riwayat Transaksi',
-                style: AppTheme.gayaSubjudul.copyWith(
-                  fontWeight: FontWeight.bold,
-                  fontSize: AppTheme.fontSubjudul,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.isPenjual ? 'Pesanan masuk' : 'Riwayat transaksi',
+                    style: const TextStyle(
+                      fontSize: AppTheme.fontSubjudul,
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.warnaNavy,
+                    ),
+                  ),
+                  const Text(
+                    'Tarik ke bawah untuk memperbarui',
+                    style: TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+                  ),
+                ],
               ),
             ),
 
@@ -147,9 +158,12 @@ class _OrdersScreenState extends State<OrdersScreen> {
                         ],
                       )
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppTheme.jarakSedang,
-                          vertical: AppTheme.jarakKecil / 2,
+                        // Jarak bawah ikut tinggi bar navigasi kaca (extendBody).
+                        padding: EdgeInsets.fromLTRB(
+                          AppTheme.jarakSedang,
+                          AppTheme.jarakKecil / 2,
+                          AppTheme.jarakSedang,
+                          MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
                         ),
                         itemCount: daftarPesanan.length,
                         itemBuilder: (context, indeks) => KartuPesanan(
@@ -166,41 +180,22 @@ class _OrdersScreenState extends State<OrdersScreen> {
     );
   }
 
+  // Tab segmen status + jumlahnya; menyaring daftar di HP (setState).
   Widget _buatChipStatus(List<OrderModel> semuaPesanan) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
-      child: Row(
-        children: _labelStatus.entries.map((entry) {
-          final String? statusKey = entry.key;
-          final int jumlah = statusKey == null
-              ? semuaPesanan.length
-              : semuaPesanan.where((o) => o.status == statusKey).length;
-          final String label = '${entry.value} ($jumlah)';
-          final bool isSelected = _filterStatus == statusKey;
+    final List<String?> daftarKunci = _labelStatus.keys.toList();
+    final List<String> daftarLabel = daftarKunci.map((kunci) {
+      final int jumlah = kunci == null
+          ? semuaPesanan.length
+          : semuaPesanan.where((o) => o.status == kunci).length;
+      return '${_labelStatus[kunci]} $jumlah';
+    }).toList();
 
-          return Padding(
-            padding: const EdgeInsets.only(right: AppTheme.jarakKecil),
-            child: ChoiceChip(
-              label: Text(label),
-              selected: isSelected,
-              selectedColor: AppTheme.warnaUtama.withValues(alpha: 0.15),
-              labelStyle: TextStyle(
-                fontSize: AppTheme.fontKecil,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppTheme.warnaUtama : AppTheme.warnaTeks,
-              ),
-              backgroundColor: AppTheme.warnaPermukaan,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radius),
-                side: BorderSide(
-                  color: isSelected ? AppTheme.warnaUtama : AppTheme.warnaGaris,
-                ),
-              ),
-              onSelected: (_) => setState(() => _filterStatus = statusKey),
-            ),
-          );
-        }).toList(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
+      child: TabSegmen(
+        daftarLabel: daftarLabel,
+        indeksAktif: daftarKunci.indexOf(_filterStatus),
+        onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
       ),
     );
   }

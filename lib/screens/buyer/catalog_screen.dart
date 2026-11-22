@@ -8,9 +8,11 @@ import '../../services/location_service.dart';
 import '../../services/sensor_service.dart';
 import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/baris_cari_kategori.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/filter_sheet.dart';
 import '../../widgets/header_katalog.dart';
+import '../../widgets/judul_bagian.dart';
 import '../../widgets/label_data_offline.dart';
 import '../../widgets/listing_card.dart';
 import '../../widgets/pil_filter_aktif.dart';
@@ -225,14 +227,17 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // 1. Header (Sapaan, Lokasi, Pencarian, Filter & Kategori Chips)
         HeaderKatalog(
           namaPengguna: _namaPengguna,
           adaLokasi: _lokasiSaya != null,
           pesanLokasi: _pesanLokasi,
           namaKota: _namaKota,
+          radiusKm: _filter.radiusKm,
+          onBukaFilter: _bukaFilterSheet,
+        ),
+        BarisCariKategori(
           pencarianController: _pencarianController,
           filter: _filter,
           onCari: _muatUlang,
@@ -243,16 +248,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
           onBukaFilter: _bukaFilterSheet,
           onPilihKategori: _pilihKategori,
         ),
-
-        const SizedBox(height: AppTheme.jarakKecil),
-
-        // 2. Baris Pil Filter Aktif (bisa dihapus satu-satu)
-        BarisPilFilterAktif(
-          filter: _filter,
-          onFilterDiubah: _ubahFilter,
-        ),
-
-        // 3. Daftar Listing
+        // Pil filter aktif (bisa dihapus satu-satu).
+        BarisPilFilterAktif(filter: _filter, onFilterDiubah: _ubahFilter),
         Expanded(
           child: FutureBuilder<List<ListingModel>>(
             future: _futureListing,
@@ -260,78 +257,62 @@ class _CatalogScreenState extends State<CatalogScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-
               if (snapshot.hasError) {
-                final String pesan = snapshot.error
-                    .toString()
-                    .replaceFirst('Exception: ', '');
+                final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
                 final bool sesiBerakhir = pesan == 'Sesi berakhir';
                 return EmptyState(
                   ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
-                  pesan: sesiBerakhir
-                      ? 'Sesi berakhir, silakan masuk lagi.'
-                      : pesan,
+                  pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
                   teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-                  onTombolDitekan: sesiBerakhir
-                      ? () => kembaliKeLogin(context)
-                      : _muatUlang,
+                  onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
                 );
               }
-
               final List<ListingModel> daftarListing = snapshot.data ?? [];
-              final String judulBagian = _filter.urutan == 'nearest'
-                  ? 'Rekomendasi Terdekat (${daftarListing.length})'
-                  : 'Daftar Produk (${daftarListing.length})';
-
-              final Widget isiDaftar = RefreshIndicator(
-                onRefresh: _muatUlang,
-                child: ListView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppTheme.jarakSedang,
-                  ),
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: AppTheme.jarakKecil,
-                      ),
-                      child: Text(
-                        judulBagian,
-                        style: AppTheme.gayaSubjudul.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    if (daftarListing.isEmpty) ...[
-                      const SizedBox(height: AppTheme.jarakBesar),
-                      const EmptyState(
-                        ikon: Icons.inventory_2_outlined,
-                        pesan:
-                            'Tidak ada produk yang cocok dengan filter atau kata kunci',
-                      ),
-                    ] else
-                      ...daftarListing.map((listing) {
-                        return ListingCard(
-                          listing: listing,
-                          onTap: () => _bukaDetail(listing),
-                          onHargaTurun: _perbaruiHarga,
-                        );
-                      }),
-                  ],
-                ),
-              );
-
-              if (!_dataOffline) return isiDaftar;
               return Column(
                 children: [
-                  const LabelDataOffline(),
-                  Expanded(child: isiDaftar),
+                  if (_dataOffline) const LabelDataOffline(),
+                  Expanded(child: _daftarKatalog(context, daftarListing)),
                 ],
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _daftarKatalog(BuildContext context, List<ListingModel> daftarListing) {
+    return RefreshIndicator(
+      onRefresh: _muatUlang,
+      child: ListView(
+        // Jarak bawah = tinggi bar navigasi kaca (extendBody) + jarak biasa.
+        padding: EdgeInsets.fromLTRB(
+          AppTheme.jarakTepi,
+          AppTheme.jarakMini,
+          AppTheme.jarakTepi,
+          MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
+        ),
+        children: [
+          JudulBagian(
+            judul: _filter.urutan == 'nearest' ? 'Lelang terdekat' : 'Daftar lelang',
+            teksKanan: '${daftarListing.length} produk',
+          ),
+          if (daftarListing.isEmpty)
+            const Padding(
+              padding: EdgeInsets.only(top: AppTheme.jarakBesar),
+              child: EmptyState(
+                ikon: Icons.search_off,
+                pesan: 'Tidak ada lelang yang cocok.\nUbah kata kunci atau hapus filter di atas.',
+              ),
+            )
+          else
+            ...daftarListing.map((listing) => ListingCard(
+                  listing: listing,
+                  onTap: () => _bukaDetail(listing),
+                  onHargaTurun: _perbaruiHarga,
+                )),
+        ],
+      ),
     );
   }
 }

@@ -105,7 +105,8 @@ class ApiService {
 
   // POST /auth/register
   // Untuk penjual, backend mewajibkan company_name.
-  // Lokasi gudang / usaha boleh kosong; backend memakai nilai bawaan.
+  // Form register mewajibkan semua kolom (termasuk lokasi GPS), tetapi
+  // parameter tetap nullable karena backend punya nilai bawaan.
   static Future<String> daftar({
     required String email,
     required String password,

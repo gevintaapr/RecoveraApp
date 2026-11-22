@@ -1,21 +1,23 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 
-import '../../models/draft_listing_model.dart';
 import '../../models/listing_model.dart';
 import '../../services/api_service.dart';
-import '../../services/local_db_service.dart';
 import '../../services/sensor_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/kolom_cari.dart';
 import '../../widgets/listing_card.dart';
+import '../../widgets/pengingat_draft_lokal.dart';
+import '../../widgets/tab_segmen.dart';
 import '../auth/login_screen.dart';
 import 'listing_detail_screen.dart';
 import 'upload_invoice_screen.dart';
 
 // Tab Stok (penjual): semua listing milik penjual (T6).
-// Menampilkan kolom pencarian stok (saring nama/merek di HP),
-// chip status dengan jumlah item, dan daftar stok.
+// Data: ApiService.ambilInventaris() lewat FutureBuilder.
+// Panel atas: jumlah produk + tombol Upload, kolom cari (saring nama/merek di HP,
+// setState tiap mengetik), dan tab segmen status. Draft di HP tampil lewat
+// ValueListenableBuilder (Hive).
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
 
@@ -26,10 +28,10 @@ class StockScreen extends StatefulWidget {
 class _StockScreenState extends State<StockScreen> {
   static const Map<String?, String> _labelStatus = {
     null: 'Semua',
-    'draft': 'Draft',
     'active': 'Aktif',
+    'draft': 'Draft',
     'sold': 'Habis',
-    'expired': 'Kedaluwarsa',
+    'expired': 'Lewat',
   };
 
   final TextEditingController _pencarianController = TextEditingController();
@@ -60,8 +62,7 @@ class _StockScreenState extends State<StockScreen> {
   }
 
   Future<void> _muatUlang() async {
-    final Future<List<ListingModel>> permintaanBaru =
-        ApiService.ambilInventaris();
+    final Future<List<ListingModel>> permintaanBaru = ApiService.ambilInventaris();
     setState(() {
       _futureStok = permintaanBaru;
     });
@@ -70,251 +71,146 @@ class _StockScreenState extends State<StockScreen> {
     } catch (_) {}
   }
 
+  bool _cocokStatus(ListingModel listing, String? status) {
+    if (status == null) return true;
+    if (status == 'draft') return listing.masihDraft;
+    return listing.status == status;
+  }
+
   List<ListingModel> _saring(List<ListingModel> semua) {
     final String kunci = _pencarianController.text.trim().toLowerCase();
-
     return semua.where((listing) {
-      // Saring status
-      bool cocokStatus = true;
-      if (_filterStatus != null) {
-        if (_filterStatus == 'draft') {
-          cocokStatus = listing.masihDraft;
-        } else {
-          cocokStatus = listing.status == _filterStatus;
-        }
-      }
-
-      // Saring kata kunci pencarian
-      bool cocokKataKunci = true;
-      if (kunci.isNotEmpty) {
-        final String nama = listing.namaProduk.toLowerCase();
-        final String merek = (listing.merek ?? '').toLowerCase();
-        cocokKataKunci = nama.contains(kunci) || merek.contains(kunci);
-      }
-
-      return cocokStatus && cocokKataKunci;
+      final bool cocokKataKunci = kunci.isEmpty ||
+          listing.namaProduk.toLowerCase().contains(kunci) ||
+          (listing.merek ?? '').toLowerCase().contains(kunci);
+      return _cocokStatus(listing, _filterStatus) && cocokKataKunci;
     }).toList();
   }
 
   Future<void> _bukaHalaman(Widget halaman) async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => halaman),
-    );
+    await Navigator.push(context, MaterialPageRoute(builder: (context) => halaman));
     if (!mounted) return;
     await _muatUlang();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _bukaHalaman(const UploadInvoiceScreen()),
-        icon: const Icon(Icons.add),
-        label: const Text('Upload Stok'),
-      ),
-      body: FutureBuilder<List<ListingModel>>(
-        future: _futureStok,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+    return FutureBuilder<List<ListingModel>>(
+      future: _futureStok,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
+          final bool sesiBerakhir = pesan == 'Sesi berakhir';
+          return EmptyState(
+            ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
+            pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
+            teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
+            onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
+          );
+        }
 
-          if (snapshot.hasError) {
-            final String pesan =
-                snapshot.error.toString().replaceFirst('Exception: ', '');
-            final bool sesiBerakhir = pesan == 'Sesi berakhir';
-            return EmptyState(
-              ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
-              pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
-              teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-              onTombolDitekan:
-                  sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
-            );
-          }
+        final List<ListingModel> semuaStok = snapshot.data ?? [];
+        final List<ListingModel> daftarStok = _saring(semuaStok);
 
-          final List<ListingModel> semuaStok = snapshot.data ?? [];
-          final List<ListingModel> daftarStok = _saring(semuaStok);
-
-          return Column(
-            children: [
-              // Pengingat Draft Lokal bila ada di Hive
-              _PengingatDraftLokal(
-                onTap: () => _bukaHalaman(const UploadInvoiceScreen()),
-              ),
-
-              // Kolom Pencarian Stok
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppTheme.jarakSedang,
-                  vertical: AppTheme.jarakKecil / 2,
-                ),
-                child: TextField(
-                  controller: _pencarianController,
-                  textInputAction: TextInputAction.search,
-                  onChanged: (_) => setState(() {}),
-                  decoration: InputDecoration(
-                    hintText: 'Cari stok produk atau merek...',
-                    prefixIcon: const Icon(Icons.search, size: 20),
-                    suffixIcon: _pencarianController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear, size: 18),
-                            onPressed: () {
-                              _pencarianController.clear();
-                              setState(() {});
-                            },
-                          )
-                        : null,
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: AppTheme.jarakSedang,
-                      vertical: AppTheme.jarakKecil,
-                    ),
-                  ),
-                ),
-              ),
-
-              // Chip Status Horizontal dengan Counter
-              _buatChipFilter(semuaStok),
-
-              const SizedBox(height: AppTheme.jarakKecil),
-
-              // Daftar Stok
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _muatUlang,
-                  child: daftarStok.isEmpty
-                      ? ListView(
-                          children: const [
-                            SizedBox(height: AppTheme.jarakBesar),
-                            EmptyState(
-                              ikon: Icons.inventory_2_outlined,
-                              pesan:
-                                  'Tidak ada stok yang cocok dengan filter atau kata kunci.',
-                            ),
-                          ],
-                        )
-                      : ListView.builder(
-                          padding: const EdgeInsets.fromLTRB(
-                            AppTheme.jarakSedang,
-                            0,
-                            AppTheme.jarakSedang,
-                            AppTheme.ikonLogo,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _panelAtas(semuaStok),
+            PengingatDraftLokal(onTap: () => _bukaHalaman(const UploadInvoiceScreen())),
+            Expanded(
+              child: RefreshIndicator(
+                onRefresh: _muatUlang,
+                child: daftarStok.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: AppTheme.jarakBesar),
+                          EmptyState(
+                            ikon: Icons.inventory_2_outlined,
+                            pesan: 'Tidak ada stok yang cocok.\nUbah kata kunci atau pilih status lain.',
                           ),
-                          itemCount: daftarStok.length,
-                          itemBuilder: (context, indeks) {
-                            final ListingModel listing = daftarStok[indeks];
-                            return ListingCard(
-                              listing: listing,
-                              untukPenjual: true,
-                              onTap: () => _bukaHalaman(
-                                SellerListingDetailScreen(idListing: listing.id),
-                              ),
-                            );
-                          },
+                        ],
+                      )
+                    : ListView.builder(
+                        // Jarak bawah = tinggi bar navigasi kaca (extendBody) + jarak biasa.
+                        padding: EdgeInsets.fromLTRB(
+                          AppTheme.jarakTepi,
+                          AppTheme.jarakKecil,
+                          AppTheme.jarakTepi,
+                          MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
                         ),
-                ),
-              ),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buatChipFilter(List<ListingModel> semuaStok) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
-      child: Row(
-        children: _labelStatus.entries.map((entry) {
-          final String? statusKey = entry.key;
-          final int jumlah = statusKey == null
-              ? semuaStok.length
-              : (statusKey == 'draft'
-                  ? semuaStok.where((l) => l.masihDraft).length
-                  : semuaStok.where((l) => l.status == statusKey).length);
-          final String label = '${entry.value} ($jumlah)';
-          final bool isSelected = _filterStatus == statusKey;
-
-          return Padding(
-            padding: const EdgeInsets.only(right: AppTheme.jarakKecil),
-            child: ChoiceChip(
-              label: Text(label),
-              selected: isSelected,
-              selectedColor: AppTheme.warnaUtama.withValues(alpha: 0.15),
-              labelStyle: TextStyle(
-                fontSize: AppTheme.fontKecil,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                color: isSelected ? AppTheme.warnaUtama : AppTheme.warnaTeks,
-              ),
-              backgroundColor: AppTheme.warnaPermukaan,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(AppTheme.radius),
-                side: BorderSide(
-                  color: isSelected ? AppTheme.warnaUtama : AppTheme.warnaGaris,
-                ),
-              ),
-              onSelected: (_) => setState(() => _filterStatus = statusKey),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-}
-
-class _PengingatDraftLokal extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _PengingatDraftLokal({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return ValueListenableBuilder<Box<DraftListingModel>>(
-      valueListenable: LocalDbService.pantauDraft(),
-      builder: (context, Box<DraftListingModel> box, child) {
-        if (box.isEmpty) return const SizedBox.shrink();
-        final int jumlah = box.length;
-        return Container(
-          margin: const EdgeInsets.fromLTRB(
-            AppTheme.jarakSedang,
-            AppTheme.jarakKecil,
-            AppTheme.jarakSedang,
-            AppTheme.jarakKecil / 2,
-          ),
-          decoration: BoxDecoration(
-            color: AppTheme.warnaAksen.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(AppTheme.radius),
-            border: Border.all(
-              color: AppTheme.warnaAksen.withValues(alpha: 0.3),
-            ),
-          ),
-          child: ListTile(
-            dense: true,
-            leading: const Icon(
-              Icons.drafts_outlined,
-              color: AppTheme.warnaAksen,
-            ),
-            title: Text(
-              '$jumlah draft produk tersimpan di HP',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: AppTheme.fontNormal,
+                        itemCount: daftarStok.length,
+                        itemBuilder: (context, indeks) {
+                          final ListingModel listing = daftarStok[indeks];
+                          return ListingCard(
+                            listing: listing,
+                            untukPenjual: true,
+                            onTap: () => _bukaHalaman(SellerListingDetailScreen(idListing: listing.id)),
+                          );
+                        },
+                      ),
               ),
             ),
-            subtitle: const Text(
-              'Ketuk untuk melanjutkan upload',
-              style: TextStyle(fontSize: AppTheme.fontKecil),
-            ),
-            trailing: const Icon(
-              Icons.arrow_forward_ios,
-              size: 14,
-              color: AppTheme.warnaAksen,
-            ),
-            onTap: onTap,
-          ),
+          ],
         );
       },
+    );
+  }
+
+  // Panel putih: jumlah + Upload, kolom cari, tab segmen status (dengan jumlah).
+  Widget _panelAtas(List<ListingModel> semuaStok) {
+    final List<String?> daftarKunci = _labelStatus.keys.toList();
+    final List<String> daftarLabel = daftarKunci
+        .map((kunci) => '${_labelStatus[kunci]} ${semuaStok.where((l) => _cocokStatus(l, kunci)).length}')
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(AppTheme.jarakTepi, 0, AppTheme.jarakTepi, AppTheme.jarakSedang),
+      decoration: const BoxDecoration(
+        color: AppTheme.warnaPermukaan,
+        border: Border(bottom: BorderSide(color: AppTheme.warnaGaris)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  '${semuaStok.length} produk di gudang',
+                  style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+                ),
+              ),
+              FilledButton.icon(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, AppTheme.tinggiInput)),
+                onPressed: () => _bukaHalaman(const UploadInvoiceScreen()),
+                icon: const Icon(Icons.add, size: AppTheme.ikonKecil),
+                label: const Text('Upload'),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppTheme.jarakKecil),
+          KolomCari(
+            controller: _pencarianController,
+            petunjuk: 'Cari nama atau merek',
+            warnaLatar: AppTheme.warnaLatar,
+            onChanged: (_) => setState(() {}),
+            onCari: () => setState(() {}),
+            onHapus: () {
+              _pencarianController.clear();
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: AppTheme.jarakKecil),
+          TabSegmen(
+            daftarLabel: daftarLabel,
+            indeksAktif: daftarKunci.indexOf(_filterStatus),
+            onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
+          ),
+        ],
+      ),
     );
   }
 }

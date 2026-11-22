@@ -58,6 +58,11 @@ class LocationService {
         1000;
   }
 
+  // Format tampilan lokasi usaha: "Nama Kota (lat, lng)", misal "Sleman (-7.7058, 110.6053)".
+  static String formatLokasi(String namaKota, double lat, double lng) {
+    return '$namaKota (${lat.toStringAsFixed(4)}, ${lng.toStringAsFixed(4)})';
+  }
+
   // Reverse geocoding: mencari nama kota dari koordinat latitude & longitude.
   // 1. Mencoba reverse geocoding OpenStreetMap (Nominatim).
   // 2. Jika offline / request gagal: estimasi kota terdekat di Indonesia.
