@@ -8,11 +8,15 @@ import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/notifikasi_glass.dart';
 import '../../widgets/tombol_favorit.dart';
+import '../../widgets/tombol_ingatkan.dart';
 import 'listing_detail_screen.dart';
 
 // Halaman Favorit (pembeli). Dibuka dengan Get.toNamed(AppRoutes.favorit).
 // Data: FavoritController.daftarFavorit (isi Hive), ditampilkan dengan Obx + ListView.builder.
 // Hapus favorit: geser item ke kiri (Dismissible) atau ketuk ikon hati.
+// Tombol lonceng (TombolIngatkan): pengingat 30 menit sebelum lelang berakhir (Modul VII);
+// status aktifnya disimpan di Hive dan ikut menyala di halaman detail.
+// Hapus favorit -> pengingatnya ikut dibatalkan (FavoritController.hapus).
 // Tidak ada setState: controller mengubah daftar, lalu Obx menggambar ulang otomatis.
 class FavoritScreen extends StatelessWidget {
   const FavoritScreen({super.key});
@@ -141,6 +145,9 @@ class _KartuFavorit extends StatelessWidget {
                   ],
                 ),
               ),
+              // Lonceng: pasang/batalkan pengingat 30 menit sebelum lelang berakhir (Modul VII).
+              // Statusnya tersimpan di Hive, sama dengan tombol "Ingatkan saya" di detail.
+              if (!favorit.lelangSudahBerakhir) TombolIngatkan(favorit: favorit, bentukIkon: true),
               TombolFavorit(favorit: favorit),
             ],
           ),

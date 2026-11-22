@@ -1,75 +1,76 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 
+import '../controllers/favorit_controller.dart';
+import '../models/favorit_model.dart';
 import '../models/listing_model.dart';
-import '../services/notification_service.dart';
+import '../theme/app_theme.dart';
 import 'dialog_memuat.dart';
 
-// Tombol "Ingatkan saya" di detail listing (Modul VII, scheduled notification).
+// Tombol "Ingatkan saya" (Modul VII, scheduled notification).
 // Menjadwalkan pop-up 30 menit sebelum lelang berakhir. Karena dijadwalkan
 // oleh Android, pengingat tetap muncul walau aplikasi sudah ditutup.
-// setState hanya untuk mengganti teks tombol setelah pengingat dipasang/dibatalkan.
-class TombolIngatkan extends StatefulWidget {
-  final ListingModel listing;
+//
+// Dipakai di dua tempat:
+// - detail listing (bentukIkon = false) -> OutlinedButton
+// - kartu di halaman Favorit (bentukIkon = true) -> ikon lonceng
+// Status aktif/tidak disimpan di Hive lewat FavoritController (GetX), dan tombol
+// dibungkus Obx, jadi lonceng di kedua halaman selalu sama tanpa setState.
+class TombolIngatkan extends StatelessWidget {
+  final FavoritModel favorit;
+  final bool bentukIkon;
 
-  const TombolIngatkan({super.key, required this.listing});
+  const TombolIngatkan({super.key, required this.favorit, this.bentukIkon = false});
 
-  @override
-  State<TombolIngatkan> createState() => _TombolIngatkanState();
-}
-
-class _TombolIngatkanState extends State<TombolIngatkan> {
-  static const Duration jedaSebelumBerakhir = Duration(minutes: 30);
-  bool sudahDipasang = false;
-
-  int get _idPengingat => NotificationService.idPengingat(widget.listing.id);
-
-  Future<void> _pasangAtauBatalkan() async {
-    final DateTime waktuPengingat =
-        widget.listing.lelangBerakhir.subtract(jedaSebelumBerakhir);
-    if (!sudahDipasang && waktuPengingat.isBefore(DateTime.now())) {
-      _tampilkanPesan('Lelang berakhir kurang dari 30 menit lagi.');
-      return;
-    }
-
+  // Dialog loading -> FavoritController.aturPengingat -> tutup dialog -> SnackBar.
+  Future<void> _pasangAtauBatalkan(BuildContext context, FavoritController favoritController) async {
+    final bool sedangAktif = favoritController.pengingatTerjadwal(favorit.idListing);
     tampilkanDialogMemuat(
       context,
-      pesan: sudahDipasang ? 'Membatalkan pengingat...' : 'Memasang pengingat...',
+      pesan: sedangAktif ? 'Membatalkan pengingat...' : 'Memasang pengingat...',
     );
     try {
-      if (sudahDipasang) {
-        await NotificationService().batalkanPengingat(_idPengingat);
-      } else {
-        await NotificationService().scheduleNotification(
-          id: _idPengingat,
-          title: 'Lelang segera berakhir',
-          body: '${widget.listing.namaProduk} berakhir 30 menit lagi. Cek harganya sekarang!',
-          scheduledTime: waktuPengingat,
-        );
-      }
-      if (!mounted) return;
+      final bool sekarangAktif = await favoritController.aturPengingat(favorit);
+      if (!context.mounted) return;
       Navigator.pop(context); // tutup dialog loading
-      setState(() => sudahDipasang = !sudahDipasang);
-      _tampilkanPesan(sudahDipasang
-          ? 'Pengingat dipasang pukul ${ListingModel.formatJam(waktuPengingat)}'
-          : 'Pengingat dibatalkan');
+      _tampilkanPesan(
+        context,
+        sekarangAktif
+            ? 'Pengingat dipasang pukul ${ListingModel.formatJam(favorit.waktuPengingat)} '
+                '(produk tersimpan di Favorit)'
+            : 'Pengingat dibatalkan',
+      );
     } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      _tampilkanPesan('Pengingat gagal dipasang');
+      if (!context.mounted) return;
+      Navigator.pop(context); // tutup dialog loading
+      _tampilkanPesan(context, e.toString().replaceFirst('Exception: ', ''));
     }
   }
 
-  void _tampilkanPesan(String pesan) {
+  void _tampilkanPesan(BuildContext context, String pesan) {
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pesan)));
   }
 
   @override
   Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: _pasangAtauBatalkan,
-      icon: Icon(sudahDipasang ? Icons.alarm_on : Icons.alarm_add),
-      label: Text(sudahDipasang ? 'Pengingat aktif (ketuk untuk batal)' : 'Ingatkan saya'),
-    );
+    final FavoritController favoritController = Get.find<FavoritController>();
+
+    return Obx(() {
+      final bool aktif = favoritController.pengingatTerjadwal(favorit.idListing);
+      if (bentukIkon) {
+        return IconButton(
+          tooltip: aktif ? 'Batalkan pengingat' : 'Ingatkan saya',
+          icon: Icon(aktif ? Icons.notifications_active : Icons.notifications_none_outlined),
+          color: AppTheme.warnaAksen,
+          onPressed: () => _pasangAtauBatalkan(context, favoritController),
+        );
+      }
+      return OutlinedButton.icon(
+        onPressed: () => _pasangAtauBatalkan(context, favoritController),
+        icon: Icon(aktif ? Icons.alarm_on : Icons.alarm_add),
+        label: Text(aktif ? 'Pengingat aktif (ketuk untuk batal)' : 'Ingatkan saya'),
+      );
+    });
   }
 }

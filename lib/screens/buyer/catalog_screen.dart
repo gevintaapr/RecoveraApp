@@ -6,23 +6,21 @@ import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../services/location_service.dart';
 import '../../services/sensor_service.dart';
+import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/filter_sheet.dart';
+import '../../widgets/header_katalog.dart';
 import '../../widgets/label_data_offline.dart';
 import '../../widgets/listing_card.dart';
-import '../../widgets/pilihan_radius.dart';
+import '../../widgets/pil_filter_aktif.dart';
 import '../auth/login_screen.dart';
 import 'listing_detail_screen.dart';
 
-// Tab Katalog (pembeli): daftar listing yang sedang dilelang.
+// Tab Katalog (pembeli): daftar listing lelang pangan B2B (T2).
 // Data: ApiService.ambilDaftarListing() lewat FutureBuilder.
-// Berhasil -> disimpan ke Hive (LocalDbService.simpanCacheKatalog).
-// Gagal karena server/internet -> tampilkan cache Hive + label "Data offline".
-// Lokasi (Modul VII): koordinat HP dikirim ke server -> server mengisi
-// distance_km tiap listing dan menyaring sesuai radius yang dipilih.
-// setState terjadi saat pencarian dikirim, daftar ditarik ke bawah, HP digoyang,
-// atau hitung mundur harga di kartu habis (harga baru diambil dari server).
-// -> _futureListing diganti -> FutureBuilder memuat ulang.
+// Mendukung filter kategori, radius jarak, sisa umur kedaluwarsa,
+// dan pengurutan (terdekat, termurah, segera exp, diskon tertinggi).
 class CatalogScreen extends StatefulWidget {
   const CatalogScreen({super.key});
 
@@ -31,28 +29,28 @@ class CatalogScreen extends StatefulWidget {
 }
 
 class _CatalogScreenState extends State<CatalogScreen> {
-  final TextEditingController pencarianController = TextEditingController();
+  final TextEditingController _pencarianController = TextEditingController();
   late Future<List<ListingModel>> _futureListing;
-  // true bila yang tampil adalah cache Hive (server tidak bisa dihubungi).
-  // Diisi di dalam _ambilKatalog, dibaca builder setelah future selesai.
   bool _dataOffline = false;
-  Position? _lokasiSaya; // null = lokasi belum didapat
-  String? _pesanLokasi; // alasan lokasi gagal (GPS mati, izin ditolak)
-  double? _radiusKm; // null = semua jarak
-  final SensorService sensorService = SensorService();
+  Position? _lokasiSaya;
+  String? _pesanLokasi;
+  String _namaPengguna = '';
+  FilterKatalog _filter = const FilterKatalog();
+  final SensorService _sensorService = SensorService();
 
   @override
   void initState() {
     super.initState();
+    _muatNamaPengguna();
     _futureListing = _ambilKatalog();
-    // Shake-to-refresh: goyang HP = sama dengan tarik ke bawah.
-    sensorService.mulaiDeteksiGoyang(_muatUlangKarenaGoyang);
+    _sensorService.mulaiDeteksiGoyang(_muatUlangKarenaGoyang);
   }
 
-  // Dipanggil kartu saat hitung mundur harga habis: ambil harga baru dari server
-  // tanpa spinner (daftar lama tetap tampil sampai data baru datang).
-  // Beberapa kartu bisa habis bersamaan, jadi permintaan yang sedang berjalan
-  // tidak diulang.
+  Future<void> _muatNamaPengguna() async {
+    final String? nama = await SessionService.ambilNamaPengguna();
+    if (mounted && nama != null) setState(() => _namaPengguna = nama);
+  }
+
   bool _sedangMemperbaruiHarga = false;
 
   Future<void> _perbaruiHarga() async {
@@ -79,43 +77,74 @@ class _CatalogScreenState extends State<CatalogScreen> {
     _muatUlang();
   }
 
-  // Fetch dari server; bila gagal, pakai katalog terakhir di Hive.
+  // Fetch dari server dengan filter lanjutan; fallback ke cache Hive.
   Future<List<ListingModel>> _ambilKatalog() async {
-    final String kataKunci = pencarianController.text.trim();
+    final String kataKunci = _pencarianController.text.trim();
     if (_lokasiSaya == null) await _ambilLokasi();
+
+    // Urutan 'discount' diurutkan di HP karena server tidak punya parameter 'discount'
+    final String? urutanApi =
+        _filter.urutan == 'discount' ? null : _filter.urutan;
+
     try {
-      final List<ListingModel> daftarListing = await ApiService.ambilDaftarListing(
+      final List<ListingModel> daftarListing =
+          await ApiService.ambilDaftarListing(
         kataKunci: kataKunci,
+        kategori: _filter.kategori,
         lat: _lokasiSaya?.latitude,
         lng: _lokasiSaya?.longitude,
-        radiusKm: _radiusKm,
+        radiusKm: _filter.radiusKm,
+        urutan: urutanApi,
       );
-      // Cache = katalog lengkap, jadi hanya disimpan bila tanpa kata kunci dan radius.
-      if (kataKunci.isEmpty && _radiusKm == null) {
+
+      // Simpan cache bila tanpa filter apa pun
+      if (kataKunci.isEmpty &&
+          _filter.kategori == null &&
+          _filter.radiusKm == null &&
+          _filter.maksSisaHari == null) {
         await LocalDbService.simpanCacheKatalog(daftarListing);
       }
       _dataOffline = false;
-      return daftarListing;
+
+      // Saring sisa hari & urutkan diskon di HP
+      return _terapkanFilterLokal(daftarListing);
     } catch (e) {
-      // Sesi berakhir bukan masalah jaringan: tetap tampilkan error-nya.
       if (e.toString().contains('Sesi berakhir')) rethrow;
       final List<ListingModel> cache = LocalDbService.ambilCacheKatalog();
-      if (cache.isEmpty) rethrow; // belum pernah online -> tampilkan error
+      if (cache.isEmpty) rethrow;
       _dataOffline = true;
-      // Pencarian saat offline: saring cache berdasarkan nama atau merek.
+
+      // Pencarian & penyaringan saat offline
       final String kunci = kataKunci.toLowerCase();
-      return cache
-          .where((listing) =>
-              listing.namaProduk.toLowerCase().contains(kunci) ||
-              (listing.merek ?? '').toLowerCase().contains(kunci))
-          .where((listing) =>
-              _radiusKm == null || (listing.jarakKm ?? 0) <= _radiusKm!)
-          .toList();
+      List<ListingModel> hasil = cache.where((item) {
+        final bool cocokTeks = kunci.isEmpty ||
+            item.namaProduk.toLowerCase().contains(kunci) ||
+            (item.merek ?? '').toLowerCase().contains(kunci);
+        final bool cocokKategori = _filter.kategori == null ||
+            item.kategori.toLowerCase() == _filter.kategori!.toLowerCase();
+        final bool cocokRadius = _filter.radiusKm == null ||
+            (item.jarakKm ?? 0) <= _filter.radiusKm!;
+        return cocokTeks && cocokKategori && cocokRadius;
+      }).toList();
+
+      return _terapkanFilterLokal(hasil);
     }
   }
 
-  // Minta lokasi lewat LocationService. Gagal tidak menghentikan katalog:
-  // katalog tetap tampil, hanya tanpa jarak.
+  List<ListingModel> _terapkanFilterLokal(List<ListingModel> daftar) {
+    List<ListingModel> hasil = daftar;
+    if (_filter.maksSisaHari != null) {
+      hasil = hasil
+          .where((item) =>
+              item.sisaHari != null && item.sisaHari! <= _filter.maksSisaHari!)
+          .toList();
+    }
+    if (_filter.urutan == 'discount') {
+      hasil.sort((a, b) => b.diskonPersen.compareTo(a.diskonPersen));
+    }
+    return hasil;
+  }
+
   Future<void> _ambilLokasi() async {
     try {
       final Position posisi = await LocationService.ambilLokasiSaatIni();
@@ -126,35 +155,49 @@ class _CatalogScreenState extends State<CatalogScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _pesanLokasi = e.toString().replaceFirst('Exception: ', ''));
+      setState(
+          () => _pesanLokasi = e.toString().replaceFirst('Exception: ', ''));
     }
-  }
-
-  void _pilihRadius(double? radius) {
-    _radiusKm = radius;
-    _muatUlang();
   }
 
   @override
   void dispose() {
-    pencarianController.dispose();
-    sensorService.berhenti(); // matikan sensor saat layar ditutup
+    _pencarianController.dispose();
+    _sensorService.berhenti();
     super.dispose();
   }
 
-  // Memuat ulang katalog dengan kata kunci saat ini.
   Future<void> _muatUlang() async {
     final Future<List<ListingModel>> permintaanBaru = _ambilKatalog();
-    // Pakai kurung kurawal: isi setState tidak boleh mengembalikan Future.
     setState(() {
       _futureListing = permintaanBaru;
     });
-    // Ditunggu supaya ikon RefreshIndicator berhenti setelah data datang.
     try {
       await permintaanBaru;
-    } catch (_) {
-      // Error ditampilkan oleh FutureBuilder.
+    } catch (_) {}
+  }
+
+  Future<void> _bukaFilterSheet() async {
+    final FilterKatalog? hasil = await tampilkanFilterSheet(
+      context: context,
+      filterSaatIni: _filter,
+    );
+    if (hasil != null) {
+      setState(() => _filter = hasil);
+      _muatUlang();
     }
+  }
+
+  void _pilihKategori(String? kategori) {
+    setState(() {
+      _filter = _filter.copyWith(kategori: () => kategori);
+    });
+    _muatUlang();
+  }
+
+  void _ubahFilter(FilterKatalog filterBaru) {
+    setState(() => _filter = filterBaru);
+    _muatUlang();
   }
 
   void _bukaDetail(ListingModel listing) {
@@ -169,83 +212,101 @@ class _CatalogScreenState extends State<CatalogScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.all(AppTheme.jarakSedang),
-          child: TextField(
-            controller: pencarianController,
-            textInputAction: TextInputAction.search,
-            onSubmitted: (_) => _muatUlang(),
-            decoration: InputDecoration(
-              hintText: 'Cari produk atau merek',
-              prefixIcon: const Icon(Icons.search),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: () {
-                  pencarianController.clear();
-                  _muatUlang();
-                },
-              ),
-            ),
-          ),
-        ),
-        PilihanRadius(
-          radiusTerpilih: _radiusKm,
+        // 1. Header (Sapaan, Lokasi, Pencarian, Filter & Kategori Chips)
+        HeaderKatalog(
+          namaPengguna: _namaPengguna,
           adaLokasi: _lokasiSaya != null,
           pesanLokasi: _pesanLokasi,
-          onDipilih: _pilihRadius,
-          onAktifkanLokasi: _muatUlang,
+          pencarianController: _pencarianController,
+          filter: _filter,
+          onCari: _muatUlang,
+          onHapusCari: () {
+            _pencarianController.clear();
+            _muatUlang();
+          },
+          onBukaFilter: _bukaFilterSheet,
+          onPilihKategori: _pilihKategori,
         ),
+
         const SizedBox(height: AppTheme.jarakKecil),
+
+        // 2. Baris Pil Filter Aktif (bisa dihapus satu-satu)
+        BarisPilFilterAktif(
+          filter: _filter,
+          onFilterDiubah: _ubahFilter,
+        ),
+
+        // 3. Daftar Listing
         Expanded(
           child: FutureBuilder<List<ListingModel>>(
             future: _futureListing,
             builder: (context, snapshot) {
-              // 1. Sedang memuat
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               }
-              // 2. Gagal
-              // Bila 401 ("Sesi berakhir"), tombolnya membawa ke Login
-              // (kembaliKeLogin menghapus sesi lalu pushAndRemoveUntil).
+
               if (snapshot.hasError) {
-                final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
+                final String pesan = snapshot.error
+                    .toString()
+                    .replaceFirst('Exception: ', '');
                 final bool sesiBerakhir = pesan == 'Sesi berakhir';
                 return EmptyState(
                   ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
-                  pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
+                  pesan: sesiBerakhir
+                      ? 'Sesi berakhir, silakan masuk lagi.'
+                      : pesan,
                   teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-                  onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
+                  onTombolDitekan: sesiBerakhir
+                      ? () => kembaliKeLogin(context)
+                      : _muatUlang,
                 );
               }
-              // 3. Berhasil
+
               final List<ListingModel> daftarListing = snapshot.data ?? [];
+              final String judulBagian = _filter.urutan == 'nearest'
+                  ? 'Rekomendasi Terdekat (${daftarListing.length})'
+                  : 'Daftar Produk (${daftarListing.length})';
+
               final Widget isiDaftar = RefreshIndicator(
                 onRefresh: _muatUlang,
-                child: daftarListing.isEmpty
-                    ? ListView(
-                        // ListView supaya tetap bisa ditarik walau kosong.
-                        children: const [
-                          SizedBox(height: AppTheme.jarakBesar),
-                          EmptyState(
-                            ikon: Icons.inventory_2_outlined,
-                            pesan: 'Belum ada produk yang sedang dilelang',
-                          ),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
-                        itemCount: daftarListing.length,
-                        itemBuilder: (context, indeks) {
-                          final ListingModel listing = daftarListing[indeks];
-                          return ListingCard(
-                            listing: listing,
-                            onTap: () => _bukaDetail(listing),
-                            onHargaTurun: _perbaruiHarga,
-                          );
-                        },
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppTheme.jarakSedang,
+                  ),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppTheme.jarakKecil,
                       ),
+                      child: Text(
+                        judulBagian,
+                        style: AppTheme.gayaSubjudul.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    if (daftarListing.isEmpty) ...[
+                      const SizedBox(height: AppTheme.jarakBesar),
+                      const EmptyState(
+                        ikon: Icons.inventory_2_outlined,
+                        pesan:
+                            'Tidak ada produk yang cocok dengan filter atau kata kunci',
+                      ),
+                    ] else
+                      ...daftarListing.map((listing) {
+                        return ListingCard(
+                          listing: listing,
+                          onTap: () => _bukaDetail(listing),
+                          onHargaTurun: _perbaruiHarga,
+                        );
+                      }),
+                  ],
+                ),
               );
+
               if (!_dataOffline) return isiDaftar;
               return Column(
                 children: [

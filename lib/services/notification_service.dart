@@ -1,20 +1,24 @@
-import 'package:flutter/foundation.dart' show TargetPlatform, defaultTargetPlatform, kIsWeb;
+import 'package:flutter/foundation.dart'
+    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:get/get.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/notification_model.dart';
+import '../screens/buyer/listing_detail_screen.dart';
+import '../screens/buyer/order_detail_screen.dart';
+import '../screens/seller/listing_detail_screen.dart';
 import 'api_service.dart';
 import 'session_service.dart';
 
 // NotificationService (Modul VII): pop-up notifikasi lokal.
-// Tiga sumber pop-up, semuanya lewat class ini:
+// Tiga sumber pop-up:
 // 1. Aksi sendiri (beli berhasil)        -> showInstantNotification
-// 2. "Ingatkan saya" sebelum lelang usai -> scheduleNotification (tetap muncul walau aplikasi ditutup)
+// 2. "Ingatkan saya" sebelum lelang usai -> scheduleNotification
 // 3. Inbox server (pesanan masuk, dll.)  -> checkNewNotifications
 //
-// Pola singleton seperti di Modul VII: NotificationService() selalu
-// mengembalikan objek yang sama, jadi plugin cukup di-init sekali di main.dart.
+// Mendukung navigasi otomatis saat pop-up di status bar diketuk (T8).
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
@@ -23,32 +27,20 @@ class NotificationService {
   final FlutterLocalNotificationsPlugin notificationPlugin =
       FlutterLocalNotificationsPlugin();
 
-  // ID channel diberi akhiran _v2: pengaturan channel Android (importance)
-  // tidak bisa diubah setelah channel dibuat. Ganti ID = channel baru.
   static const String channelId = 'recovera_channel_v2';
   static const String channelName = 'Notifikasi Recovera';
 
-  // ID notifikasi harus unik, kalau tidak notifikasi baru menimpa yang lama.
-  // Dibuat rentang terpisah agar tiga sumber tidak saling bentrok:
-  //   inbox server : id notifikasi server apa adanya (1, 2, 3, ...)
-  //   beli berhasil: 1.000.000 + id pesanan
-  //   pengingat    : 2.000.000 + id listing
-  //   listing terbit: 3.000.000 + id listing
   static int idBeliBerhasil(int idPesanan) => 1000000 + idPesanan;
   static int idPengingat(int idListing) => 2000000 + idListing;
   static int idListingTerbit(int idListing) => 3000000 + idListing;
 
-  // Pop-up hanya disiapkan untuk Android (target demo). Saat aplikasi dijalankan
-  // di Chrome / Windows untuk uji tampilan, semua method di bawah diam saja.
-  bool get _didukung => !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+  bool get _didukung =>
+      !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
 
   // Dipanggil sekali di main.dart sebelum runApp.
   Future<void> init() async {
     if (!_didukung) return;
-    // CATATAN: Menggunakan timezone (elemen di luar modul)
-    // Fungsi: menyediakan zona waktu untuk notifikasi terjadwal.
-    // Alasan: zonedSchedule pada flutter_local_notifications wajib memakai TZDateTime.
-    // Cara kerja: muat data semua zona waktu, lalu tetapkan zona lokal ke Asia/Jakarta (WIB).
+
     tz.initializeTimeZones();
     tz.setLocalLocation(tz.getLocation('Asia/Jakarta'));
 
@@ -56,15 +48,17 @@ class NotificationService {
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initSettings =
         InitializationSettings(android: androidSettings);
-    await notificationPlugin.initialize(settings: initSettings);
+
+    await notificationPlugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: _tanganiResponsNotifikasi,
+    );
 
     final AndroidFlutterLocalNotificationsPlugin? androidPlatform =
         notificationPlugin.resolvePlatformSpecificImplementation<
             AndroidFlutterLocalNotificationsPlugin>();
-    // Android 13+ wajib meminta izin notifikasi ke pengguna.
     await androidPlatform?.requestNotificationsPermission();
 
-    // Importance.max agar Android menampilkan pop-up di atas layar (heads-up).
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       channelId,
       channelName,
@@ -72,6 +66,36 @@ class NotificationService {
       importance: Importance.max,
     );
     await androidPlatform?.createNotificationChannel(channel);
+  }
+
+  // CATATAN: Navigasi payload pop-up status bar (elemen di luar modul)
+  // Fungsi: membuka layar detail pesanan atau produk saat pop-up status bar diketuk.
+  // Cara kerja: saat notifikasi ditampilkan, payload teks "order:ID" atau "listing:ID" disertakan.
+  // Ketika pengguna mengetuk notifikasi, handler ini membaca payload dan
+  // melakukan navigasi menggunakan Get.to dari GetMaterialApp.
+  static void _tanganiResponsNotifikasi(NotificationResponse response) async {
+    final String? payload = response.payload;
+    if (payload == null || payload.isEmpty) return;
+
+    final List<String> bagian = payload.split(':');
+    if (bagian.length < 2) return;
+
+    final String tipe = bagian[0];
+    final int? id = int.tryParse(bagian[1]);
+    if (id == null) return;
+
+    final String? peran = await SessionService.ambilPeran();
+    final bool isPenjual = peran == 'seller';
+
+    if (tipe == 'order') {
+      Get.to(() => OrderDetailScreen(idPesanan: id, isPenjual: isPenjual));
+    } else if (tipe == 'listing') {
+      if (isPenjual) {
+        Get.to(() => SellerListingDetailScreen(idListing: id));
+      } else {
+        Get.to(() => ListingDetailScreen(idListing: id));
+      }
+    }
   }
 
   NotificationDetails _buatDetail() {
@@ -90,43 +114,44 @@ class NotificationService {
     required int id,
     required String title,
     required String body,
+    String? payload,
   }) async {
     if (!_didukung) return;
     await notificationPlugin.show(
       id: id,
       title: title,
       body: body,
+      payload: payload,
       notificationDetails: _buatDetail(),
     );
   }
 
-  // 2. Pop-up terjadwal. Dijadwalkan oleh Android, jadi tetap muncul
-  //    walau aplikasi ditutup.
+  // 2. Pop-up terjadwal.
   Future<void> scheduleNotification({
     required int id,
     required String title,
     required String body,
     required DateTime scheduledTime,
+    String? payload,
   }) async {
     if (!_didukung) return;
     final tz.TZDateTime waktu = tz.TZDateTime.from(scheduledTime, tz.local);
     try {
-      // Tepat waktu. Butuh izin "Alarm & pengingat" (Android 12+).
       await notificationPlugin.zonedSchedule(
         id: id,
         title: title,
         body: body,
+        payload: payload,
         scheduledDate: waktu,
         notificationDetails: _buatDetail(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
     } catch (e) {
-      // Izin alarm tepat belum diberikan (default di Android 14):
-      // tetap dijadwalkan, hanya bisa mundur beberapa menit.
       await notificationPlugin.zonedSchedule(
         id: id,
         title: title,
         body: body,
+        payload: payload,
         scheduledDate: waktu,
         notificationDetails: _buatDetail(),
         androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
@@ -139,20 +164,28 @@ class NotificationService {
     await notificationPlugin.cancel(id: id);
   }
 
-  // 3. Jembatan inbox server -> pop-up lokal (tanpa FCM, tanpa Timer).
-  // Ambil GET /notifications, munculkan pop-up untuk notifikasi yang ID-nya
-  // lebih besar dari ID terakhir yang pernah dilihat (last_notif_id).
-  // Mengembalikan daftar notifikasi supaya pemanggil bisa menghitung badge.
+  // 3. Jembatan inbox server -> pop-up lokal.
   Future<List<NotificationModel>> checkNewNotifications() async {
-    final List<NotificationModel> daftarNotif = await ApiService.ambilNotifikasi();
+    final List<NotificationModel> daftarNotif =
+        await ApiService.ambilNotifikasi();
     final int? idTerakhir = await SessionService.ambilIdNotifTerakhir();
 
     int idTerbesar = idTerakhir ?? 0;
     for (final NotificationModel notif in daftarNotif) {
-      // idTerakhir == null: pengecekan pertama setelah login.
-      // Notifikasi lama tidak di-pop-up, cukup dicatat ID terbesarnya.
       if (idTerakhir != null && notif.id > idTerakhir && !notif.sudahDibaca) {
-        await showInstantNotification(id: notif.id, title: notif.judul, body: notif.isi);
+        String? payload;
+        if (notif.idPesanan != null) {
+          payload = 'order:${notif.idPesanan}';
+        } else if (notif.idListing != null) {
+          payload = 'listing:${notif.idListing}';
+        }
+
+        await showInstantNotification(
+          id: notif.id,
+          title: notif.judul,
+          body: notif.isi,
+          payload: payload,
+        );
       }
       if (notif.id > idTerbesar) idTerbesar = notif.id;
     }

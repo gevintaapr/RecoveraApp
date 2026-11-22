@@ -9,19 +9,18 @@ import '../../models/price_advice_model.dart';
 import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/dialog_memuat.dart';
 import '../../widgets/form_data_produk.dart';
+import '../../widgets/indikator_langkah.dart';
 import '../../widgets/kartu_rekomendasi_harga.dart';
+import '../../widgets/kartu_review_upload.dart';
 import '../../widgets/pilih_foto.dart';
 import '../../widgets/primary_button.dart';
 import '../auth/login_screen.dart';
 
-// Upload stok langkah 2 (penjual): data produk -> rekomendasi harga -> terbitkan.
-// Form diisi otomatis dari hasil OCR (itemFaktur) atau dari draft Hive (draft);
-// keduanya dikirim lewat konstruktor dari UploadInvoiceScreen.
-// - "Simpan Draft"  -> LocalDbService.simpanDraft (Hive, tanpa internet).
-// - "Lanjut"        -> unggahGambarProduk -> buatDraft -> ambilRekomendasiHarga,
-//                      lalu setState menampilkan kartu rekomendasi.
-// - "Terbitkan"     -> terbitkanListing -> notifikasi "Listing terbit".
+// Upload stok langkah 2 & 3 (penjual):
+// Langkah 2: Data Produk (form OCR / manual / draf lokal)
+// Langkah 3: Review Data, Ubah Harga Awal Manual, & Terbitkan (T7)
 class ListingFormScreen extends StatefulWidget {
   final InvoiceItemModel? itemFaktur;
   final DraftListingModel? draft;
@@ -51,16 +50,17 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   String? _galatFoto;
 
   bool _sedangMemproses = false;
-  ListingModel? _draftServer; // terisi setelah "Lanjut" berhasil
+  ListingModel? _draftServer;
   PriceAdviceModel? _saranHarga;
 
-  // Masa simpan minimal 30 hari (aturan backend agar lelang sempat berjalan).
-  DateTime get _tanggalPalingAwal => DateTime.now().add(const Duration(days: 30));
+  DateTime get _tanggalPalingAwal =>
+      DateTime.now().add(const Duration(days: 30));
 
   @override
   void initState() {
     super.initState();
-    nomorBatchController.text = 'LOT-${DateTime.now().millisecondsSinceEpoch % 100000}';
+    nomorBatchController.text =
+        'LOT-${DateTime.now().millisecondsSinceEpoch % 100000}';
     final InvoiceItemModel? item = widget.itemFaktur;
     final DraftListingModel? draft = widget.draft;
     if (item != null) {
@@ -69,15 +69,21 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       jumlahController.text = '${item.jumlah}';
       hargaNormalController.text = item.hargaNormal.round().toString();
       hargaMinimumController.text = (item.hargaNormal * 0.3).round().toString();
-      if (FormDataProduk.daftarKategori.contains(item.kategori)) _kategori = item.kategori;
-      if (FormDataProduk.daftarSatuan.contains(item.satuan)) _satuan = item.satuan;
+      if (FormDataProduk.daftarKategori.contains(item.kategori)) {
+        _kategori = item.kategori;
+      }
+      if (FormDataProduk.daftarSatuan.contains(item.satuan)) {
+        _satuan = item.satuan;
+      }
       _aturTanggal(item.tanggalKedaluwarsa);
     } else if (draft != null) {
       namaController.text = draft.namaProduk;
       merekController.text = draft.merek ?? '';
       jumlahController.text = draft.jumlah > 0 ? '${draft.jumlah}' : '';
-      hargaNormalController.text = draft.hargaNormal > 0 ? draft.hargaNormal.round().toString() : '';
-      hargaMinimumController.text = draft.hargaMinimum > 0 ? draft.hargaMinimum.round().toString() : '';
+      hargaNormalController.text =
+          draft.hargaNormal > 0 ? draft.hargaNormal.round().toString() : '';
+      hargaMinimumController.text =
+          draft.hargaMinimum > 0 ? draft.hargaMinimum.round().toString() : '';
       nomorBatchController.text = draft.nomorBatch;
       _kategori = draft.kategori;
       _penyimpanan = draft.jenisPenyimpanan;
@@ -87,7 +93,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     }
   }
 
-  // Tanggal dari OCR/draft hanya dipakai bila masih memenuhi batas 30 hari.
   void _aturTanggal(DateTime? tanggal) {
     if (tanggal == null || tanggal.isBefore(_tanggalPalingAwal)) return;
     _tanggalKedaluwarsa = tanggal;
@@ -117,16 +122,18 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     setState(() => _aturTanggal(hasil));
   }
 
-  // Draft lokal: cukup nama produk; kolom lain boleh kosong dulu.
   Future<void> _simpanDraftLokal() async {
     if (namaController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Isi nama produk dulu untuk menyimpan draft')),
+        const SnackBar(
+          content: Text('Isi nama produk dulu untuk menyimpan draft'),
+        ),
       );
       return;
     }
     await LocalDbService.simpanDraft(DraftListingModel(
-      idDraft: widget.draft?.idDraft ?? '${DateTime.now().millisecondsSinceEpoch}',
+      idDraft:
+          widget.draft?.idDraft ?? '${DateTime.now().millisecondsSinceEpoch}',
       namaProduk: namaController.text.trim(),
       merek: merekController.text.trim(),
       kategori: _kategori,
@@ -147,10 +154,10 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     Navigator.pop(context);
   }
 
-  // Lanjut: foto -> draft di server -> rekomendasi harga.
   Future<void> _lanjutKeRekomendasi() async {
     final bool formValid = _kunciForm.currentState!.validate();
-    setState(() => _galatFoto = _fotoProduk == null ? 'Foto produk wajib diunggah' : null);
+    setState(() =>
+        _galatFoto = _fotoProduk == null ? 'Foto produk wajib diunggah' : null);
     if (!formValid || _fotoProduk == null) return;
 
     setState(() => _sedangMemproses = true);
@@ -172,9 +179,11 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
         hargaMinimum: double.parse(hargaMinimumController.text),
         tanggalKedaluwarsa: _tanggalKedaluwarsa!,
       );
-      final PriceAdviceModel saran = await ApiService.ambilRekomendasiHarga(draftServer.id);
-      // Draft sudah tersimpan di server, salinan di HP tidak diperlukan lagi.
-      if (widget.draft != null) await LocalDbService.hapusDraft(widget.draft!.idDraft);
+      final PriceAdviceModel saran =
+          await ApiService.ambilRekomendasiHarga(draftServer.id);
+      if (widget.draft != null) {
+        await LocalDbService.hapusDraft(widget.draft!.idDraft);
+      }
       if (!mounted) return;
       setState(() {
         _draftServer = draftServer;
@@ -184,6 +193,149 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       await _tampilkanGalat(e);
     } finally {
       if (mounted) setState(() => _sedangMemproses = false);
+    }
+  }
+
+  // Dialog Ubah Harga Awal Manual dengan Peringatan Rentang (T7)
+  Future<void> _bukaDialogUbahHargaAwal() async {
+    if (_draftServer == null || _saranHarga == null) return;
+
+    final double hargaAwalSekarang =
+        _draftServer!.hargaMulai ?? _saranHarga!.hargaSaran;
+    final TextEditingController hargaAwalCtrl = TextEditingController(
+      text: hargaAwalSekarang.round().toString(),
+    );
+
+    final double batasBawah =
+        _saranHarga!.batasBawah ?? (_saranHarga!.hargaSaran * 0.8);
+    final double batasAtas =
+        _saranHarga!.batasAtas ?? (_saranHarga!.hargaSaran * 1.2);
+
+    final bool? simpan = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            final double? nilaiInput = double.tryParse(hargaAwalCtrl.text);
+            final bool diLuarRentang = nilaiInput != null &&
+                (nilaiInput < batasBawah || nilaiInput > batasAtas);
+
+            return AlertDialog(
+              title: const Text('Ubah Harga Awal Manual'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Tentukan harga mulai lelang sebelum diterbitkan.',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontKecil,
+                        color: AppTheme.warnaTeksRedup,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.jarakKecil),
+                    Text(
+                      'Rentang wajar AI: ${ListingModel.formatRupiah(batasBawah)} – ${ListingModel.formatRupiah(batasAtas)}',
+                      style: const TextStyle(
+                        fontSize: AppTheme.fontKecil,
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.warnaUtama,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.jarakSedang),
+                    TextField(
+                      controller: hargaAwalCtrl,
+                      keyboardType: TextInputType.number,
+                      onChanged: (_) => setDialogState(() {}),
+                      decoration: const InputDecoration(
+                        labelText: 'Harga Mulai Lelang (Rp)',
+                        prefixText: 'Rp ',
+                      ),
+                    ),
+                    if (diLuarRentang) ...[
+                      const SizedBox(height: AppTheme.jarakKecil),
+                      Container(
+                        padding: const EdgeInsets.all(AppTheme.jarakKecil),
+                        decoration: BoxDecoration(
+                          color: AppTheme.warnaAksen.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(AppTheme.radius),
+                          border: Border.all(
+                            color: AppTheme.warnaAksen.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.warning_amber_rounded,
+                              size: 18,
+                              color: AppTheme.warnaAksen,
+                            ),
+                            SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                'Peringatan: Harga berada di luar rentang saran AI. Anda akan diminta menyetujui konfirmasi saat menerbitkan.',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: AppTheme.warnaAksen,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Batal'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+
+    if (simpan != true || !mounted) return;
+
+    final double? hargaBaru = double.tryParse(hargaAwalCtrl.text);
+    if (hargaBaru == null || hargaBaru <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Masukkan angka harga yang valid')),
+      );
+      return;
+    }
+
+    tampilkanDialogMemuat(context, pesan: 'Menyimpan harga awal baru...');
+    try {
+      final ListingModel updated = await ApiService.ubahDraft(
+        _draftServer!.id,
+        {'start_price': hargaBaru},
+      );
+      final PriceAdviceModel saranBaru =
+          await ApiService.ambilRekomendasiHarga(_draftServer!.id);
+      if (!mounted) return;
+      Navigator.pop(context); // tutup dialog
+      setState(() {
+        _draftServer = updated;
+        _saranHarga = saranBaru;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Harga awal lelang berhasil disesuaikan')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      await _tampilkanGalat(e);
     }
   }
 
@@ -198,7 +350,6 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Listing berhasil diterbitkan')),
       );
-      // Kembali ke MainShell (melewati layar upload faktur).
       Navigator.popUntil(context, (route) => route.isFirst);
     } catch (e) {
       await _tampilkanGalat(e);
@@ -212,28 +363,45 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       await kembaliKeLogin(context);
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(pesan)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(pesan),
+        backgroundColor: AppTheme.warnaGalat,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(_draftServer == null ? 'Data Produk' : 'Rekomendasi Harga')),
+      appBar: AppBar(
+        title: Text(
+          _draftServer == null
+              ? 'Langkah 2: Data Produk'
+              : 'Langkah 3: Harga & Terbit',
+        ),
+      ),
       body: _draftServer == null ? _buatForm() : _buatTahapTerbit(),
     );
   }
 
-  // Tahap setelah "Lanjut": kartu rekomendasi + tombol Terbitkan.
+  // Tahap 3: Indikator langkah 3, Kartu Review, Kartu Rekomendasi, Tombol Terbitkan
   Widget _buatTahapTerbit() {
     return ListView(
       padding: const EdgeInsets.all(AppTheme.jarakSedang),
       children: [
+        const IndikatorLangkah(langkahAktif: 3),
+        KartuReviewUpload(
+          draft: _draftServer!,
+          fotoLokal: _fotoProduk,
+          onUbahHargaAwal: _bukaDialogUbahHargaAwal,
+        ),
         KartuRekomendasiHarga(saran: _saranHarga!, draft: _draftServer!),
         const SizedBox(height: AppTheme.jarakBesar),
-        PrimaryButton(teks: 'Terbitkan', onPressed: _terbitkan),
+        PrimaryButton(teks: 'Terbitkan Sekarang', onPressed: _terbitkan),
         const SizedBox(height: AppTheme.jarakKecil),
         const Text(
-          'Belum ingin terbit? Draft ini tetap tersimpan di server dan bisa diterbitkan dari halaman Stok.',
+          'Belum ingin terbit? Draft ini tetap tersimpan di server dan bisa diedit kembali dari halaman Stok.',
           style: AppTheme.gayaTeksRedup,
           textAlign: TextAlign.center,
         ),
@@ -247,6 +415,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       child: ListView(
         padding: const EdgeInsets.all(AppTheme.jarakSedang),
         children: [
+          const IndikatorLangkah(langkahAktif: 2),
           PilihFoto(
             gambar: _fotoProduk,
             teksKosong: 'Foto produk (wajib)',
@@ -270,7 +439,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
             penyimpanan: _penyimpanan,
             satuan: _satuan,
             onKategoriBerubah: (nilai) => setState(() => _kategori = nilai),
-            onPenyimpananBerubah: (nilai) => setState(() => _penyimpanan = nilai),
+            onPenyimpananBerubah: (nilai) =>
+                setState(() => _penyimpanan = nilai),
             onSatuanBerubah: (nilai) => setState(() => _satuan = nilai),
             onPilihTanggal: _pilihTanggal,
           ),

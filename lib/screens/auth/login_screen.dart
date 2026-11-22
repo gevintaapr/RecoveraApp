@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../services/api_service.dart';
+import '../../services/local_db_service.dart';
 import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/primary_button.dart';
@@ -8,10 +9,11 @@ import '../shared/main_shell.dart';
 import 'register_screen.dart';
 
 // Dipakai saat logout dan saat server membalas "Sesi berakhir" (401):
-// hapus sesi, lalu pushAndRemoveUntil ke Login supaya semua halaman
+// hapus sesi + cache pesanan (Hive), lalu pushAndRemoveUntil ke Login supaya semua halaman
 // sebelumnya terhapus dan tombol back tidak kembali ke halaman yang butuh login.
 Future<void> kembaliKeLogin(BuildContext context) async {
   await SessionService.hapusSesi();
+  await LocalDbService.hapusCachePesanan();
   if (!context.mounted) return;
   Navigator.pushAndRemoveUntil(
     context,

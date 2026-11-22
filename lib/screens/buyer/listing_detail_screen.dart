@@ -281,7 +281,7 @@ class _IsiDetail extends StatelessWidget {
         if (jarakKeGudang != null)
           BarisInfo(label: 'Jarak ke gudang', nilai: ListingModel.formatJarak(jarakKeGudang)),
         const SizedBox(height: AppTheme.jarakSedang),
-        TombolIngatkan(listing: listing),
+        TombolIngatkan(favorit: FavoritModel.dariListing(listing)),
       ],
     );
   }

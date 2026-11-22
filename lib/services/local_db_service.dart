@@ -4,6 +4,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import '../models/draft_listing_model.dart';
 import '../models/favorit_model.dart';
 import '../models/listing_model.dart';
+import '../models/order_model.dart';
 
 // LocalDbService: SATU-SATUNYA tempat yang menyentuh Hive (Modul VI).
 // Screen dan controller memanggil method di sini, tidak membuka box sendiri.
@@ -11,6 +12,7 @@ class LocalDbService {
   static const String _namaBoxFavorit = 'favorit_listing';
   static const String _namaBoxCacheKatalog = 'listings_cache';
   static const String _namaBoxDraft = 'draft_listings';
+  static const String _namaBoxCachePesanan = 'orders_cache';
 
   // Dipanggil sekali di main.dart sebelum runApp.
   static Future<void> init() async {
@@ -19,9 +21,11 @@ class LocalDbService {
     Hive.registerAdapter(FavoritModelAdapter());
     Hive.registerAdapter(ListingModelAdapter());
     Hive.registerAdapter(DraftListingModelAdapter());
+    Hive.registerAdapter(OrderModelAdapter());
     await Hive.openBox<FavoritModel>(_namaBoxFavorit);
     await Hive.openBox<ListingModel>(_namaBoxCacheKatalog);
     await Hive.openBox<DraftListingModel>(_namaBoxDraft);
+    await Hive.openBox<OrderModel>(_namaBoxCachePesanan);
   }
 
   static Box<FavoritModel> get _boxFavorit =>
@@ -42,6 +46,28 @@ class LocalDbService {
   // Dipakai saat server tidak bisa dihubungi (tampil dengan label "Data offline").
   static List<ListingModel> ambilCacheKatalog() {
     return _boxCacheKatalog.values.toList();
+  }
+
+  // ===== CACHE PESANAN =====
+
+  static Box<OrderModel> get _boxCachePesanan =>
+      Hive.box<OrderModel>(_namaBoxCachePesanan);
+
+  // Menyimpan daftar pesanan terakhir dari server (isi lama diganti).
+  static Future<void> simpanCachePesanan(List<OrderModel> daftarPesanan) async {
+    await _boxCachePesanan.clear();
+    await _boxCachePesanan.addAll(daftarPesanan);
+  }
+
+  // Dipakai saat server tidak bisa dihubungi (tampil dengan label "Data offline").
+  static List<OrderModel> ambilCachePesanan() {
+    return _boxCachePesanan.values.toList();
+  }
+
+  // Dipanggil saat logout / sesi berakhir, supaya pesanan akun ini
+  // tidak terlihat oleh akun lain yang masuk di HP yang sama.
+  static Future<void> hapusCachePesanan() async {
+    await _boxCachePesanan.clear();
   }
 
   // ===== FAVORIT =====

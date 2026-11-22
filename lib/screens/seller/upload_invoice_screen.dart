@@ -8,6 +8,7 @@ import '../../models/listing_model.dart';
 import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/indikator_langkah.dart';
 import '../../widgets/pilih_foto.dart';
 import '../../widgets/primary_button.dart';
 import '../auth/login_screen.dart';
@@ -82,6 +83,7 @@ class _UploadInvoiceScreenState extends State<UploadInvoiceScreen> {
       body: ListView(
         padding: const EdgeInsets.all(AppTheme.jarakSedang),
         children: [
+          const IndikatorLangkah(langkahAktif: 1),
           const Text('Langkah 1: Foto faktur', style: AppTheme.gayaSubjudul),
           const SizedBox(height: AppTheme.jarakKecil / 2),
           const Text(

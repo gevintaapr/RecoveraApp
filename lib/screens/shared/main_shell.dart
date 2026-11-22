@@ -55,10 +55,10 @@ class _MainShellState extends State<MainShell> {
 
   // Array halaman: yang tampil = _pages[_selectedIndex].
   List<Widget> get _pages => isPenjual
-      ? const [
-          DashboardScreen(),
-          StockScreen(),
-          ProfileScreen(),
+      ? [
+          DashboardScreen(onPindahKeStok: () => _pindahTab(1)),
+          const StockScreen(),
+          const ProfileScreen(),
         ]
       : const [
           CatalogScreen(),
@@ -68,24 +68,35 @@ class _MainShellState extends State<MainShell> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_judulTab[_selectedIndex]),
-        actions: [
-          // Ikon Favorit + badge jumlah, hanya untuk pembeli.
-          if (!isPenjual) const _IkonFavorit(),
-          const _IkonNotifikasi(),
-        ],
-      ),
-      body: _pages[_selectedIndex],
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: AppTheme.warnaUtama,
-        onTap: _pindahTab,
-        items: List.generate(
-          _judulTab.length,
-          (i) => BottomNavigationBarItem(icon: Icon(_ikonTab[i]), label: _judulTab[i]),
+    return PopScope(
+      canPop: _selectedIndex == 0,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop && _selectedIndex != 0) {
+          _pindahTab(0);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_judulTab[_selectedIndex]),
+          actions: [
+            // Ikon Favorit + badge jumlah, hanya untuk pembeli.
+            if (!isPenjual) const _IkonFavorit(),
+            const _IkonNotifikasi(),
+          ],
+        ),
+        body: _pages[_selectedIndex],
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: AppTheme.warnaUtama,
+          onTap: _pindahTab,
+          items: List.generate(
+            _judulTab.length,
+            (i) => BottomNavigationBarItem(
+              icon: Icon(_ikonTab[i]),
+              label: _judulTab[i],
+            ),
+          ),
         ),
       ),
     );

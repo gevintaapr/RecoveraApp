@@ -378,6 +378,38 @@ class ApiService {
     return ListingModel.fromJson(data);
   }
 
+  // DELETE /listings/seller/inventory/{id}
+  // Menghapus produk berstatus draft dari inventaris penjual.
+  static Future<void> hapusDraft(int idListing) async {
+    final http.Response response = await _kirim(
+      http.delete(
+        Uri.parse('$baseUrl/listings/seller/inventory/$idListing'),
+        headers: await _buatHeader(),
+      ),
+    );
+    _olahResponse(response);
+  }
+
+  // PATCH /listings/seller/inventory/{id}
+  // Memperbarui data draft (nama, stok, harga, tanggal, nomor batch).
+  static Future<ListingModel> ubahDraft(
+    int idListing,
+    Map<String, dynamic> data,
+  ) async {
+    final http.Response response = await _kirim(
+      http.patch(
+        Uri.parse('$baseUrl/listings/seller/inventory/$idListing'),
+        headers: await _buatHeader(),
+        body: jsonEncode(data),
+      ),
+    );
+    final Map<String, dynamic> hasil =
+        _olahResponse(response) as Map<String, dynamic>;
+    final Map<String, dynamic> listingJson =
+        (hasil['listing'] ?? hasil) as Map<String, dynamic>;
+    return ListingModel.fromJson(listingJson);
+  }
+
   // POST /products/upload-image (multipart, field "file")
   // Satu-satunya endpoint /products yang dipakai: foto produk diunggah
   // ke penyimpanan server, hasilnya image_url untuk membuat draft.
@@ -481,6 +513,31 @@ class ApiService {
         Uri.parse('$baseUrl/orders/$idPesanan/status'),
         headers: await _buatHeader(),
         body: jsonEncode({'status': statusBaru}),
+      ),
+    );
+    _olahResponse(response);
+  }
+
+  // POST /orders/{id}/remind-seller  (khusus pembeli)
+  // Mengirim notifikasi pengingat ke penjual. Hanya untuk status "paid";
+  // server menolak bila pengingat terakhir belum lewat 3 jam (pesan error dari server).
+  static Future<void> ingatkanPenjual(int idPesanan) async {
+    final http.Response response = await _kirim(
+      http.post(
+        Uri.parse('$baseUrl/orders/$idPesanan/remind-seller'),
+        headers: await _buatHeader(),
+      ),
+    );
+    _olahResponse(response);
+  }
+
+  // POST /orders/{id}/remind-buyer  (khusus penjual)
+  // Mengirim notifikasi pengingat ke pembeli agar mengambil barang (status in_progress).
+  static Future<void> ingatkanPembeli(int idPesanan) async {
+    final http.Response response = await _kirim(
+      http.post(
+        Uri.parse('$baseUrl/orders/$idPesanan/remind-buyer'),
+        headers: await _buatHeader(),
       ),
     );
     _olahResponse(response);

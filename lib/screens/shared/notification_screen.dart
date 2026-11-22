@@ -2,21 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/notifikasi_controller.dart';
-import '../../models/listing_model.dart';
 import '../../models/notification_model.dart';
 import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/dialog_memuat.dart';
 import '../../widgets/empty_state.dart';
 import '../auth/login_screen.dart';
+import '../buyer/listing_detail_screen.dart';
 import '../buyer/order_detail_screen.dart';
+import '../seller/listing_detail_screen.dart';
 
-// Halaman Notifikasi (kedua peran), dibuka dari ikon lonceng di AppBar.
-// Data: NotifikasiController.muatUlang() -> NotificationService.checkNewNotifications()
-//       -> ApiService.ambilNotifikasi(). Notifikasi baru sekaligus muncul sebagai pop-up.
-// setState: saat ditarik ke bawah (RefreshIndicator) atau setelah notifikasi dibaca
-// -> future diganti -> FutureBuilder memuat ulang.
-// Ketuk notifikasi -> ditandai dibaca -> bila terkait pesanan, buka detail pesanan.
+// Halaman Notifikasi (kedua peran), dibuka dari ikon lonceng di AppBar (T8).
+// Menampilkan waktu relatif dan membuka halaman yang sesuai dengan jenis notifikasi.
 class NotificationScreen extends StatefulWidget {
   const NotificationScreen({super.key});
 
@@ -25,7 +22,8 @@ class NotificationScreen extends StatefulWidget {
 }
 
 class _NotificationScreenState extends State<NotificationScreen> {
-  final NotifikasiController notifikasiController = Get.find<NotifikasiController>();
+  final NotifikasiController notifikasiController =
+      Get.find<NotifikasiController>();
   late Future<List<NotificationModel>> _futureNotifikasi;
 
   @override
@@ -35,15 +33,14 @@ class _NotificationScreenState extends State<NotificationScreen> {
   }
 
   Future<void> _muatUlang() async {
-    final Future<List<NotificationModel>> permintaanBaru = notifikasiController.muatUlang();
+    final Future<List<NotificationModel>> permintaanBaru =
+        notifikasiController.muatUlang();
     setState(() {
       _futureNotifikasi = permintaanBaru;
     });
     try {
       await permintaanBaru;
-    } catch (_) {
-      // Error ditampilkan oleh FutureBuilder.
-    }
+    } catch (_) {}
   }
 
   Future<void> _bukaNotifikasi(NotificationModel notif) async {
@@ -57,25 +54,56 @@ class _NotificationScreenState extends State<NotificationScreen> {
         if (!mounted) return;
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          SnackBar(
+            content: Text(e.toString().replaceFirst('Exception: ', '')),
+            backgroundColor: AppTheme.warnaGalat,
+          ),
         );
         return;
       }
     }
     if (!mounted) return;
+
+    final String? peran = await SessionService.ambilPeran();
+    final bool isPenjual = peran == 'seller';
+    if (!mounted) return;
+
+    // Navigasi sesuai jenis notifikasi (T8)
     if (notif.idPesanan != null) {
-      // Penjual membuka detail dengan tombol ubah status, pembeli tanpa.
-      final bool isPenjual = await SessionService.ambilPeran() == 'seller';
-      if (!mounted) return;
       await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => OrderDetailScreen(idPesanan: notif.idPesanan!, isPenjual: isPenjual),
+          builder: (context) => OrderDetailScreen(
+            idPesanan: notif.idPesanan!,
+            isPenjual: isPenjual,
+          ),
         ),
       );
       if (!mounted) return;
+    } else if (notif.idListing != null) {
+      if (isPenjual) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SellerListingDetailScreen(
+              idListing: notif.idListing!,
+            ),
+          ),
+        );
+      } else {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListingDetailScreen(
+              idListing: notif.idListing!,
+            ),
+          ),
+        );
+      }
+      if (!mounted) return;
     }
-    _muatUlang(); // tampilan "sudah dibaca" ikut diperbarui
+
+    _muatUlang();
   }
 
   @override
@@ -89,13 +117,15 @@ class _NotificationScreenState extends State<NotificationScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
+            final String pesan =
+                snapshot.error.toString().replaceFirst('Exception: ', '');
             final bool sesiBerakhir = pesan == 'Sesi berakhir';
             return EmptyState(
               ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
               pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
               teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-              onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
+              onTombolDitekan:
+                  sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
             );
           }
           final List<NotificationModel> daftarNotif = snapshot.data ?? [];
@@ -105,15 +135,22 @@ class _NotificationScreenState extends State<NotificationScreen> {
                 ? ListView(
                     children: const [
                       SizedBox(height: AppTheme.jarakBesar),
-                      EmptyState(ikon: Icons.notifications_none, pesan: 'Belum ada notifikasi'),
+                      EmptyState(
+                        ikon: Icons.notifications_none,
+                        pesan: 'Belum ada notifikasi',
+                      ),
                     ],
                   )
                 : ListView.separated(
                     itemCount: daftarNotif.length,
-                    separatorBuilder: (context, indeks) => const Divider(height: 1),
+                    separatorBuilder: (context, indeks) =>
+                        const Divider(height: 1),
                     itemBuilder: (context, indeks) {
                       final NotificationModel notif = daftarNotif[indeks];
-                      return _ItemNotifikasi(notif: notif, onTap: () => _bukaNotifikasi(notif));
+                      return _ItemNotifikasi(
+                        notif: notif,
+                        onTap: () => _bukaNotifikasi(notif),
+                      );
                     },
                   ),
           );
@@ -131,25 +168,60 @@ class _ItemNotifikasi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Belum dibaca: latar putih, judul tebal, titik hijau.
     return ListTile(
       tileColor: notif.sudahDibaca ? null : AppTheme.warnaPermukaan,
       leading: Icon(
-        notif.tipe == 'new_order' ? Icons.shopping_bag_outlined : Icons.notifications_outlined,
-        color: notif.sudahDibaca ? AppTheme.warnaTeksRedup : AppTheme.warnaUtama,
+        notif.idPesanan != null
+            ? Icons.receipt_long_outlined
+            : (notif.idListing != null
+                ? Icons.inventory_2_outlined
+                : Icons.notifications_outlined),
+        color:
+            notif.sudahDibaca ? AppTheme.warnaTeksRedup : AppTheme.warnaUtama,
       ),
       title: Text(
         notif.judul,
-        style: TextStyle(fontWeight: notif.sudahDibaca ? FontWeight.normal : FontWeight.bold),
+        style: TextStyle(
+          fontWeight: notif.sudahDibaca ? FontWeight.normal : FontWeight.bold,
+          color: AppTheme.warnaTeks,
+        ),
       ),
-      subtitle: Text(
-        '${notif.isi}\n${ListingModel.formatTanggal(notif.dibuatPada)}, '
-        '${ListingModel.formatJam(notif.dibuatPada)}',
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 2),
+          Text(
+            notif.isi,
+            style: const TextStyle(
+              fontSize: AppTheme.fontNormal,
+              color: AppTheme.warnaTeksRedup,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            notif.waktuRelatif,
+            style: TextStyle(
+              fontSize: AppTheme.fontKecil,
+              fontWeight:
+                  notif.sudahDibaca ? FontWeight.normal : FontWeight.w600,
+              color: notif.sudahDibaca
+                  ? AppTheme.warnaTeksRedup
+                  : AppTheme.warnaUtama,
+            ),
+          ),
+        ],
       ),
       isThreeLine: true,
       trailing: notif.sudahDibaca
           ? null
-          : const Icon(Icons.circle, size: AppTheme.jarakKecil, color: AppTheme.warnaUtama),
+          : Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.warnaUtama,
+              ),
+            ),
       onTap: onTap,
     );
   }

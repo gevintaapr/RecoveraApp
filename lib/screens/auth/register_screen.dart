@@ -102,17 +102,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Tombol "Gunakan lokasi saat ini": dialog loading -> GPS -> simpan koordinat.
+  // Tombol "Gunakan lokasi saat ini": dialog loading -> GPS -> deteksi nama kota & koordinat.
+  // Otomatis menimpa kolom kotaController dengan kota yang terdeteksi dari GPS.
   Future<void> _ambilLokasiGudang() async {
-    tampilkanDialogMemuat(context, pesan: 'Mengambil lokasi...');
+    tampilkanDialogMemuat(context, pesan: 'Mendeteksi lokasi & kota gudang...');
     try {
       final Position posisi = await LocationService.ambilLokasiSaatIni();
+      final String namaKota = await LocationService.ambilNamaKota(
+        posisi.latitude,
+        posisi.longitude,
+      );
       if (!mounted) return;
       Navigator.pop(context); // tutup dialog loading
       setState(() {
         latGudang = posisi.latitude;
         lngGudang = posisi.longitude;
+        kotaController.text = namaKota; // Mengganti kota sebelumnya secara otomatis
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Lokasi terdeteksi: $namaKota (${posisi.latitude.toStringAsFixed(4)}, ${posisi.longitude.toStringAsFixed(4)})',
+          ),
+          backgroundColor: AppTheme.warnaUtama,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
@@ -221,8 +235,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   icon: const Icon(Icons.my_location),
                   label: Text(latGudang == null
                       ? 'Gunakan lokasi saat ini sebagai gudang'
-                      : 'Lokasi gudang: ${latGudang!.toStringAsFixed(5)}, '
-                          '${lngGudang!.toStringAsFixed(5)}'),
+                      : 'Gudang: ${kotaController.text.isNotEmpty ? kotaController.text : "Koordinat"} (${latGudang!.toStringAsFixed(4)}, ${lngGudang!.toStringAsFixed(4)})'),
                 ),
               ] else
                 DropdownButtonFormField<String>(

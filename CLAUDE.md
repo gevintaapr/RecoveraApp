@@ -87,11 +87,11 @@ Format komentar, tepat di atas kodenya:
 |---|---|
 | SharedPreferences | `access_token`, `role`, `user_name`, `is_logged_in`, `last_notif_id` |
 | Hive `listings_cache` | katalog terakhir (tampil saat offline, dengan label "Data offline") |
-| Hive `orders_cache` | pesanan terakhir |
+| Hive `orders_cache` | pesanan terakhir (tampil saat offline dengan label "Data offline"; dihapus saat logout / sesi berakhir) |
 | Hive `draft_listings` | draft upload penjual (diterbitkan manual lewat tombol "Terbitkan") |
 | Hive `favorit_listing` | listing lelang yang disimpan pembeli (kunci = id listing), dibaca lewat `FavoritController` |
 
-Saat logout: hapus semua key sesi **termasuk `last_notif_id`**, lalu `pushAndRemoveUntil` ke Login.
+Saat logout: hapus semua key sesi **termasuk `last_notif_id`** dan isi box `orders_cache`, lalu `pushAndRemoveUntil` ke Login.
 
 ## Notifikasi
 
@@ -100,12 +100,12 @@ Saat logout: hapus semua key sesi **termasuk `last_notif_id`**, lalu `pushAndRem
 - Tiga sumber pop-up:
   1. Aksi sendiri (beli berhasil, listing terbit) → `showInstantNotification`.
   2. Tombol "Ingatkan saya" 30 menit sebelum lelang berakhir → `scheduleNotification` (tetap muncul walau aplikasi ditutup).
-  3. Notifikasi server → `checkNewNotifications()` dipanggil **sekali** di `initState` `MainShell`, dan setiap `notification_screen` dibuka atau ditarik ke bawah (`RefreshIndicator`). **Tanpa `Timer`, tanpa `WidgetsBindingObserver`.**
-- Batasan yang harus jujur disebut saat presentasi: tanpa FCM, pop-up dari server hanya muncul saat aplikasi dibuka atau di-refresh.
+  3. Notifikasi server → `checkNewNotifications()` dipanggil di `initState` `MainShell`, **setiap pindah tab** di `BottomNavigationBar` (`MainShell._pindahTab`), dan setiap `notification_screen` dibuka atau ditarik ke bawah (`RefreshIndicator`). **Tanpa `Timer`, tanpa `WidgetsBindingObserver`.**
+- Batasan yang harus jujur disebut saat presentasi: tanpa FCM, pop-up dari server hanya muncul saat aplikasi dibuka, pindah tab, atau di-refresh.
 
 ## Endpoint
 
-Dipakai: `/auth/register`, `/auth/login`, `/auth/logout`, `GET /profile`, `GET /listings`, `GET /listings/{id}`, `POST /listings/{id}/buy`, `GET /listings/my`, `/listings/seller/inventory` (+ `drafts`, `recommendation`, `publish`), `PATCH /listings/{id}`, `POST /ai/invoice` (multipart), `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/status`, `GET /notifications`, `PATCH /notifications/{id}/read`.
+Dipakai: `/auth/register`, `/auth/login`, `/auth/logout`, `GET /profile`, `GET /listings`, `GET /listings/{id}`, `POST /listings/{id}/buy`, `GET /listings/my`, `/listings/seller/inventory` (+ `drafts`, `recommendation`, `publish`), `PATCH /listings/{id}`, `POST /ai/invoice` (multipart), `GET /orders`, `GET /orders/{id}`, `PATCH /orders/{id}/status`, `POST /orders/{id}/remind-seller` (pembeli, status `paid`, jeda 3 jam dari server), `POST /orders/{id}/remind-buyer` (penjual, status `in_progress`, jeda 3 jam dari server), `GET /notifications`, `PATCH /notifications/{id}/read`.
 
 Pengecualian `/products`: **`POST /products/upload-image`** (multipart, field `file`) boleh dipakai untuk upload gambar produk penjual; hasilnya `image_url` untuk membuat draft.
 
