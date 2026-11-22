@@ -35,6 +35,14 @@ class FavoritModel {
   @HiveField(7)
   final DateTime waktuDisimpan;
 
+  // true = pengingat "30 menit sebelum lelang berakhir" sudah dijadwalkan.
+  // Disimpan di Hive supaya status lonceng tetap benar walau aplikasi ditutup.
+  // defaultValue: favorit lama (sebelum field ini ada) dibaca sebagai false.
+  @HiveField(8, defaultValue: false)
+  final bool pengingatAktif;
+
+  static const Duration jedaPengingat = Duration(minutes: 30);
+
   FavoritModel({
     required this.idListing,
     required this.namaProduk,
@@ -44,6 +52,7 @@ class FavoritModel {
     required this.lelangBerakhir,
     this.namaPenjual,
     required this.waktuDisimpan,
+    this.pengingatAktif = false,
   });
 
   // Membuat favorit dari listing yang sedang dilihat.
@@ -61,4 +70,25 @@ class FavoritModel {
   }
 
   bool get lelangSudahBerakhir => DateTime.now().isAfter(lelangBerakhir);
+
+  // Waktu pop-up pengingat: 30 menit sebelum lelang berakhir.
+  DateTime get waktuPengingat => lelangBerakhir.subtract(jedaPengingat);
+
+  // Lonceng tampil "aktif" hanya bila pengingat dipasang dan belum lewat waktunya.
+  bool get pengingatTerjadwal => pengingatAktif && waktuPengingat.isAfter(DateTime.now());
+
+  // Salinan dengan status pengingat baru (model final, jadi dibuat objek baru).
+  FavoritModel salinDenganPengingat(bool aktif) {
+    return FavoritModel(
+      idListing: idListing,
+      namaProduk: namaProduk,
+      urlGambar: urlGambar,
+      hargaSaatDisimpan: hargaSaatDisimpan,
+      hargaNormal: hargaNormal,
+      lelangBerakhir: lelangBerakhir,
+      namaPenjual: namaPenjual,
+      waktuDisimpan: waktuDisimpan,
+      pengingatAktif: aktif,
+    );
+  }
 }

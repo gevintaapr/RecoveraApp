@@ -40,13 +40,14 @@ class ListingModelAdapter extends TypeAdapter<ListingModel> {
       status: fields[18] as String,
       nomorBatch: fields[21] as String?,
       jenisPenyimpanan: fields[22] as String?,
+      hargaMulai: fields[23] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ListingModel obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -92,7 +93,9 @@ class ListingModelAdapter extends TypeAdapter<ListingModel> {
       ..writeByte(21)
       ..write(obj.nomorBatch)
       ..writeByte(22)
-      ..write(obj.jenisPenyimpanan);
+      ..write(obj.jenisPenyimpanan)
+      ..writeByte(23)
+      ..write(obj.hargaMulai);
   }
 
   @override

@@ -58,6 +58,8 @@ class ListingModel {
   final String? nomorBatch;
   @HiveField(22)
   final String? jenisPenyimpanan;
+  @HiveField(23)
+  final double? hargaMulai;
 
   ListingModel({
     required this.id,
@@ -83,6 +85,7 @@ class ListingModel {
     required this.status,
     this.nomorBatch,
     this.jenisPenyimpanan,
+    this.hargaMulai,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
@@ -117,6 +120,7 @@ class ListingModel {
       status: json['status'] as String? ?? 'active',
       nomorBatch: json['batch_number'] as String?,
       jenisPenyimpanan: produk['storage_type'] as String?,
+      hargaMulai: (json['start_price'] as num?)?.toDouble(),
     );
   }
 

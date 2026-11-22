@@ -25,13 +25,14 @@ class FavoritModelAdapter extends TypeAdapter<FavoritModel> {
       lelangBerakhir: fields[5] as DateTime,
       namaPenjual: fields[6] as String?,
       waktuDisimpan: fields[7] as DateTime,
+      pengingatAktif: fields[8] == null ? false : fields[8] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, FavoritModel obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.idListing)
       ..writeByte(1)
@@ -47,7 +48,9 @@ class FavoritModelAdapter extends TypeAdapter<FavoritModel> {
       ..writeByte(6)
       ..write(obj.namaPenjual)
       ..writeByte(7)
-      ..write(obj.waktuDisimpan);
+      ..write(obj.waktuDisimpan)
+      ..writeByte(8)
+      ..write(obj.pengingatAktif);
   }
 
   @override

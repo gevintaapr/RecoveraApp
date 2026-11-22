@@ -1,18 +1,41 @@
+import 'package:hive/hive.dart';
+
+// File ini dibuat otomatis oleh build_runner (Modul VI):
+//   dart run build_runner build --delete-conflicting-outputs
+part 'order_model.g.dart';
+
 // Model pesanan dari POST /listings/{id}/buy, GET /orders, dan GET /orders/{id}.
 // Status dari server: paid -> in_progress -> completed (diubah oleh penjual).
+//
+// @HiveType: daftar pesanan juga disimpan di Hive box 'orders_cache'
+// sebagai pesanan terakhir, untuk ditampilkan saat offline (Modul VI).
+@HiveType(typeId: 3)
 class OrderModel {
+  @HiveField(0)
   final int id;
+  @HiveField(1)
   final int idListing;
+  @HiveField(2)
   final String namaProduk;
+  @HiveField(3)
   final String? kategori;
+  @HiveField(4)
   final String? urlGambar;
+  @HiveField(5)
   final String? namaPenjual;
+  @HiveField(6)
   final String? namaPembeli;
+  @HiveField(7)
   final int jumlah;
+  @HiveField(8)
   final double hargaSatuan;
+  @HiveField(9)
   final double totalHarga;
+  @HiveField(10)
   final String status;
+  @HiveField(11)
   final DateTime dibuatPada;
+  @HiveField(12)
   final String? alamatGudang;
 
   OrderModel({
