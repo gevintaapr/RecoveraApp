@@ -1,7 +1,9 @@
+import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.ai.engine import AIEngine
 from app.config import get_settings
@@ -65,6 +67,11 @@ app.add_middleware(
 
 # Register uniform envelope error handlers
 register_exception_handlers(app)
+
+# Static files for product uploads
+uploads_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "uploads")
+os.makedirs(os.path.join(uploads_path, "products"), exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=uploads_path), name="uploads")
 
 
 @app.get(

@@ -207,9 +207,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: AppTheme.warnaAksen,
                     ),
                     const SizedBox(width: AppTheme.jarakKecil),
-                    Text(
-                      'Stok Mendekati Kedaluwarsa (${daftarMendekatiKedaluwarsa.length})',
-                      style: AppTheme.gayaSubjudul,
+                    Expanded(
+                      child: Text(
+                        'Stok Mendekati Kedaluwarsa (${daftarMendekatiKedaluwarsa.length})',
+                        style: AppTheme.gayaSubjudul,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ],
                 ),
@@ -227,9 +231,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'Pesanan Menunggu Tindakan (${perluDiproses.length})',
-                    style: AppTheme.gayaSubjudul,
+                  Expanded(
+                    child: Text(
+                      'Pesanan Menunggu Tindakan (${perluDiproses.length})',
+                      style: AppTheme.gayaSubjudul,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                   TextButton(
                     onPressed: _bukaSemuaPesanan,

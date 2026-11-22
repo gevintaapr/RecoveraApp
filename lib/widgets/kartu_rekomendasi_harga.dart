@@ -39,13 +39,14 @@ class KartuRekomendasiHarga extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.jarakKecil),
             Text('Harga awal lelang', style: AppTheme.gayaTeksRedup),
-            Row(
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppTheme.jarakKecil,
+              runSpacing: 4,
               children: [
                 Text(ListingModel.formatRupiah(saran.hargaSaran),
                     style: AppTheme.gayaJudul.copyWith(color: AppTheme.warnaUtama)),
-                const SizedBox(width: AppTheme.jarakKecil),
                 Text(ListingModel.formatRupiah(draft.hargaNormal), style: AppTheme.gayaHargaCoret),
-                const SizedBox(width: AppTheme.jarakKecil),
                 Text('-${saran.persenDiskon.round()}%',
                     style: const TextStyle(color: AppTheme.warnaAksen, fontWeight: FontWeight.bold)),
               ],

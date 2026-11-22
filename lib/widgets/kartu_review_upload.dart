@@ -35,16 +35,22 @@ class KartuReviewUpload extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppTheme.jarakKecil,
               children: [
-                const Icon(
-                  Icons.rate_review_outlined,
-                  color: AppTheme.warnaUtama,
-                  size: 20,
-                ),
-                const SizedBox(width: AppTheme.jarakKecil),
-                const Expanded(
-                  child: Text('Review Data Listing', style: AppTheme.gayaSubjudul),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: const [
+                    Icon(
+                      Icons.rate_review_outlined,
+                      color: AppTheme.warnaUtama,
+                      size: 20,
+                    ),
+                    SizedBox(width: AppTheme.jarakKecil),
+                    Text('Review Data Listing', style: AppTheme.gayaSubjudul),
+                  ],
                 ),
                 TextButton.icon(
                   style: TextButton.styleFrom(visualDensity: VisualDensity.compact),

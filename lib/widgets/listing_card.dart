@@ -56,9 +56,13 @@ class ListingCard extends StatelessWidget {
                   onHargaTurun: onHargaTurun,
                 ),
               ),
-              if (untukPenjual)
-                StatusBadge(status: listing.status, label: listing.labelStatus)
-              else
+              if (untukPenjual) ...[
+                const SizedBox(width: AppTheme.jarakKecil / 2),
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 90),
+                  child: StatusBadge(status: listing.status, label: listing.labelStatus),
+                ),
+              ] else
                 TombolFavorit(favorit: FavoritModel.dariListing(listing)),
             ],
           ),
@@ -106,14 +110,16 @@ class _InfoListing extends StatelessWidget {
             ),
           ),
         const SizedBox(height: AppTheme.jarakKecil),
-        // Harga / satuan & Coret
-        Row(
+        // Harga / satuan & Coret (Wrap agar responsif & tidak overflow)
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: AppTheme.jarakKecil,
+          runSpacing: 2,
           children: [
             Text(
               '${ListingModel.formatRupiah(listing.hargaSekarang)} / ${listing.satuan}',
               style: AppTheme.gayaHarga,
             ),
-            const SizedBox(width: AppTheme.jarakKecil),
             Text(
               ListingModel.formatRupiah(listing.hargaNormal),
               style: AppTheme.gayaHargaCoret,
@@ -131,12 +137,16 @@ class _InfoListing extends StatelessWidget {
                 color: segeraKedaluwarsa ? AppTheme.warnaGalat : AppTheme.warnaTeksRedup,
               ),
               const SizedBox(width: 4),
-              Text(
-                'Kedaluwarsa ${listing.sisaHari} hari lagi',
-                style: TextStyle(
-                  fontSize: AppTheme.fontKecil,
-                  fontWeight: segeraKedaluwarsa ? FontWeight.bold : FontWeight.normal,
-                  color: segeraKedaluwarsa ? AppTheme.warnaGalat : AppTheme.warnaTeksRedup,
+              Expanded(
+                child: Text(
+                  'Kedaluwarsa ${listing.sisaHari} hari lagi',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: AppTheme.fontKecil,
+                    fontWeight: segeraKedaluwarsa ? FontWeight.bold : FontWeight.normal,
+                    color: segeraKedaluwarsa ? AppTheme.warnaGalat : AppTheme.warnaTeksRedup,
+                  ),
                 ),
               ),
             ],

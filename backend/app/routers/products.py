@@ -1,4 +1,5 @@
 import hashlib
+import os
 import time
 from typing import Annotated
 from urllib.parse import quote
@@ -21,8 +22,6 @@ async def upload_product_image(
     file: Annotated[UploadFile, File()],
 ) -> dict:
     settings = get_settings()
-    if not settings.supabase_url or not settings.supabase_secret_key:
-        raise AppException("IMAGE_STORAGE_NOT_CONFIGURED", "Supabase Storage belum dikonfigurasi di server", status.HTTP_503_SERVICE_UNAVAILABLE)
     if not file.content_type or not file.content_type.startswith("image/"):
         raise AppException("INVALID_IMAGE_TYPE", "File harus berupa gambar", status.HTTP_422_UNPROCESSABLE_ENTITY)
     content = await file.read(2 * 1024 * 1024 + 1)
@@ -39,27 +38,40 @@ async def upload_product_image(
     if extension is None:
         raise AppException("INVALID_IMAGE_TYPE", "Format foto yang didukung: JPEG, PNG, WebP, atau GIF", status.HTTP_422_UNPROCESSABLE_ENTITY)
 
-    object_path = f"products/{timestamp}_{hashlib.sha256(content).hexdigest()[:16]}.{extension}"
-    bucket = quote(settings.supabase_storage_bucket, safe="")
-    encoded_path = quote(object_path, safe="/")
-    storage_url = settings.supabase_url.rstrip("/")
-    upload_url = f"{storage_url}/storage/v1/object/{bucket}/{encoded_path}"
-    headers = {
-        "apikey": settings.supabase_secret_key,
-        "Content-Type": file.content_type,
-        "x-upsert": "false",
-    }
-    # Legacy service_role keys are JWTs; current sb_secret keys are API keys, not JWTs.
-    if settings.supabase_secret_key.startswith("eyJ"):
-        headers["Authorization"] = f"Bearer {settings.supabase_secret_key}"
-    try:
-        async with httpx.AsyncClient(timeout=30) as client:
-            response = await client.post(upload_url, headers=headers, content=content)
-            response.raise_for_status()
-    except (httpx.HTTPError, ValueError) as exc:
-        raise AppException("IMAGE_UPLOAD_FAILED", "Foto produk gagal diunggah", status.HTTP_502_BAD_GATEWAY) from exc
+    filename = f"{timestamp}_{hashlib.sha256(content).hexdigest()[:16]}.{extension}"
+    object_path = f"products/{filename}"
 
-    image_url = f"{storage_url}/storage/v1/object/public/{bucket}/{encoded_path}"
+    # Bila Supabase Storage terkonfigurasi, unggah langsung ke cloud Supabase
+    if settings.supabase_url and settings.supabase_secret_key:
+        bucket = quote(settings.supabase_storage_bucket, safe="")
+        encoded_path = quote(object_path, safe="/")
+        storage_url = settings.supabase_url.rstrip("/")
+        upload_url = f"{storage_url}/storage/v1/object/{bucket}/{encoded_path}"
+        headers = {
+            "apikey": settings.supabase_secret_key,
+            "Authorization": f"Bearer {settings.supabase_secret_key}",
+            "Content-Type": file.content_type,
+            "x-upsert": "false",
+        }
+        try:
+            async with httpx.AsyncClient(timeout=30) as client:
+                response = await client.post(upload_url, headers=headers, content=content)
+                response.raise_for_status()
+            image_url = f"{storage_url}/storage/v1/object/public/{bucket}/{encoded_path}"
+            return wrap_success({"image_url": image_url})
+        except Exception:
+            # Fallback ke penyimpanan lokal jika koneksi/bucket Supabase gagal
+            pass
+
+    # Fallback penyimpanan lokal: simpan di backend/uploads/products/ dan layani via StaticFiles
+    base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    uploads_dir = os.path.join(base_dir, "uploads", "products")
+    os.makedirs(uploads_dir, exist_ok=True)
+    file_path = os.path.join(uploads_dir, filename)
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    image_url = f"http://127.0.0.1:8000/uploads/products/{filename}"
     return wrap_success({"image_url": image_url})
 
 

@@ -185,7 +185,10 @@ class KartuPesanan extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.done_all_rounded, size: 18),
-              label: const Text('Konfirmasi Selesai Diambil'),
+              label: const FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text('Konfirmasi Selesai Diambil'),
+              ),
               onPressed: () => _ubahStatus(context, 'completed'),
             ),
           ),

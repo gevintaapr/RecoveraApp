@@ -34,6 +34,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
   bool _dataOffline = false;
   Position? _lokasiSaya;
   String? _pesanLokasi;
+  String? _namaKota;
   String _namaPengguna = '';
   FilterKatalog _filter = const FilterKatalog();
   final SensorService _sensorService = SensorService();
@@ -153,11 +154,23 @@ class _CatalogScreenState extends State<CatalogScreen> {
         _lokasiSaya = posisi;
         _pesanLokasi = null;
       });
+      _ambilNamaKota(posisi);
     } catch (e) {
       if (!mounted) return;
       setState(
           () => _pesanLokasi = e.toString().replaceFirst('Exception: ', ''));
     }
+  }
+
+  Future<void> _ambilNamaKota(Position posisi) async {
+    try {
+      final String kota = await LocationService.ambilNamaKota(
+        posisi.latitude,
+        posisi.longitude,
+      );
+      if (!mounted) return;
+      setState(() => _namaKota = kota);
+    } catch (_) {}
   }
 
   @override
@@ -219,6 +232,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
           namaPengguna: _namaPengguna,
           adaLokasi: _lokasiSaya != null,
           pesanLokasi: _pesanLokasi,
+          namaKota: _namaKota,
           pencarianController: _pencarianController,
           filter: _filter,
           onCari: _muatUlang,

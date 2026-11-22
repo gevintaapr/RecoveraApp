@@ -91,9 +91,13 @@ class _PriceCountdownState extends State<PriceCountdown> {
         children: [
           const Icon(Icons.trending_down, size: AppTheme.fontNormal, color: AppTheme.warnaAksen),
           const SizedBox(width: AppTheme.jarakKecil / 2),
-          Text(
-            habis ? 'Memperbarui harga...' : 'Turun dalam $_teksSisa',
-            style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaAksen),
+          Flexible(
+            child: Text(
+              habis ? 'Memperbarui harga...' : 'Turun dalam $_teksSisa',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaAksen),
+            ),
           ),
         ],
       );

@@ -9,6 +9,7 @@ class HeaderKatalog extends StatelessWidget {
   final String namaPengguna;
   final bool adaLokasi;
   final String? pesanLokasi;
+  final String? namaKota;
   final TextEditingController pencarianController;
   final FilterKatalog filter;
   final VoidCallback onCari;
@@ -21,6 +22,7 @@ class HeaderKatalog extends StatelessWidget {
     required this.namaPengguna,
     required this.adaLokasi,
     required this.pesanLokasi,
+    this.namaKota,
     required this.pencarianController,
     required this.filter,
     required this.onCari,
@@ -61,6 +63,8 @@ class HeaderKatalog extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 2),
               Row(
@@ -74,7 +78,9 @@ class HeaderKatalog extends StatelessWidget {
                   Expanded(
                     child: Text(
                       adaLokasi
-                          ? 'Lokasi terdeteksi (akurasi GPS aktif)'
+                          ? (namaKota != null && namaKota!.isNotEmpty
+                              ? namaKota!
+                              : 'Mendeteksi nama kota...')
                           : (pesanLokasi ?? 'Mendeteksi lokasi terdekat...'),
                       style: const TextStyle(
                         fontSize: AppTheme.fontKecil,
