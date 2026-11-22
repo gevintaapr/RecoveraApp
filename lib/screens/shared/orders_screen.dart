@@ -8,7 +8,7 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/kartu_pesanan.dart';
 import '../../widgets/label_data_offline.dart';
 import '../../widgets/ringkasan_pesanan_penjual.dart';
-import '../../widgets/tab_segmen.dart';
+import '../../widgets/chip_filter_status.dart';
 import '../auth/login_screen.dart';
 
 // Tab Pesanan untuk Pembeli (T3) dan Penjual (T4).
@@ -115,16 +115,16 @@ class _OrdersScreenState extends State<OrdersScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    widget.isPenjual ? 'Pesanan masuk' : 'Riwayat transaksi',
+                    widget.isPenjual ? 'Kelola Pesanan Masuk' : 'Riwayat Transaksi',
                     style: const TextStyle(
-                      fontSize: AppTheme.fontSubjudul,
+                      fontSize: AppTheme.fontNamaProfil,
                       fontWeight: FontWeight.w800,
                       color: AppTheme.warnaNavy,
                     ),
                   ),
                   const Text(
-                    'Tarik ke bawah untuk memperbarui',
-                    style: TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+                    'Manajemen pesanan & batch B2B',
+                    style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup),
                   ),
                 ],
               ),
@@ -187,16 +187,13 @@ class _OrdersScreenState extends State<OrdersScreen> {
       final int jumlah = kunci == null
           ? semuaPesanan.length
           : semuaPesanan.where((o) => o.status == kunci).length;
-      return '${_labelStatus[kunci]} $jumlah';
+      return kunci == null ? '${_labelStatus[kunci]}' : '${_labelStatus[kunci]} ($jumlah)';
     }).toList();
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
-      child: TabSegmen(
-        daftarLabel: daftarLabel,
-        indeksAktif: daftarKunci.indexOf(_filterStatus),
-        onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
-      ),
+    return ChipFilterStatus(
+      daftarLabel: daftarLabel,
+      indeksAktif: daftarKunci.indexOf(_filterStatus),
+      onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
     );
   }
 

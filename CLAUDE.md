@@ -14,7 +14,7 @@ Dokumen rujukan (baca hanya saat dibutuhkan, jangan dibaca semua sekaligus):
 
 Proyek ini harus membuktikan penerapan modul. Pola di luar modul hanya boleh dipakai bila benar-benar perlu, dan wajib diberi komentar (lihat "Elemen di luar modul"). Modul (PDF) ada di folder induk `../`.
 
-**Dilarang:** Provider, Bloc, Riverpod, MobX, Redux, Dio, sqflite, flutter_secure_storage, local_auth, firebase_messaging, flutter_map, web3, go_router, freezed, json_serializable.
+**Dilarang:** Provider, Bloc, Riverpod, MobX, Redux, Dio, sqflite, flutter_secure_storage, local_auth, firebase_messaging, web3, go_router, freezed, json_serializable.
 
 **Dipakai:**
 - State: `StatefulWidget` + `setState`, `FutureBuilder`, `ValueListenableBuilder` (Hive). `StatelessWidget` bila tidak ada state.
@@ -23,7 +23,7 @@ Proyek ini harus membuktikan penerapan modul. Pola di luar modul hanya boleh dip
 - HTTP: package `http` (`http.get`, `http.post`, `http.MultipartRequest` untuk upload) dengan `Future`, `async`, `await`.
 - Penyimpanan: `shared_preferences` untuk sesi; `hive` + `hive_flutter` untuk cache, draft, dan favorit. Ikuti Modul VI: model Hive memakai `@HiveType` / `@HiveField` + `TypeAdapter` hasil `hive_generator` + `build_runner` (`dart run build_runner build`), didaftarkan dengan `Hive.registerAdapter` di `LocalDbService.init()` yang dipanggil `main.dart`. Setelah mengubah model ber-`@HiveType`, jalankan ulang `dart run build_runner build --delete-conflicting-outputs`.
 - Lokasi: `geolocator`. Notifikasi: `flutter_local_notifications` (immediate + scheduled), `timezone`.
-- Di luar modul (wajib dikomentari): `sensors_plus`, `image_picker`, `http.MultipartRequest`, `timezone`, `Timer`.
+- Di luar modul (wajib dikomentari): `sensors_plus`, `image_picker`, `http.MultipartRequest`, `timezone`, `Timer`, `google_fonts` (font Inter Recovera), `flutter_map` + `latlong2` (pilih lokasi dari peta di Register, disetujui pemilik proyek).
 
 ## Struktur folder (jangan menambah lapisan selain yang tertulis)
 
@@ -43,7 +43,7 @@ lib/
 │   ├── notification_service.dart  # immediate + scheduled + checkNewNotifications
 │   └── sensor_service.dart   # akselerometer
 ├── screens/
-│   ├── auth/    splash, login, register
+│   ├── auth/    splash, login, register, pilih_lokasi (peta OSM)
 │   ├── shared/  main_shell, profile, notification, orders (dipakai kedua peran)
 │   ├── seller/  dashboard, stock, upload_invoice, listing_form, listing_detail
 │   └── buyer/   catalog, listing_detail, order_detail, favorit
@@ -115,7 +115,7 @@ Harga lelang Belanda **dihitung server** (`current_price`, `next_drop_at`). Flut
 
 ## Fitur yang sengaja dibuang (jangan ditambahkan kembali)
 
-Biometrik, Saran & Kesan, mini game (tab Game), FCM, sertifikat ESG + SHA-256 / blockchain, kompas magnetometer, peta OSM / pin picker, konversi mata uang dan waktu, refresh token otomatis. Jarak ke gudang cukup teks, misalnya "2,4 km".
+Biometrik, Saran & Kesan, mini game (tab Game), FCM, sertifikat ESG + SHA-256 / blockchain, kompas magnetometer, konversi mata uang dan waktu, refresh token otomatis. Jarak ke gudang cukup teks, misalnya "2,4 km". Peta hanya dipakai untuk memilih lokasi saat Register.
 
 ## Prioritas pengerjaan
 

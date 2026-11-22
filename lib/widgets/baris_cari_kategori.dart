@@ -44,13 +44,13 @@ class BarisCariKategori extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakTepi),
+          padding: const EdgeInsets.fromLTRB(AppTheme.jarakTepi, AppTheme.jarakSedang, AppTheme.jarakTepi, 0),
           child: Row(
             children: [
               Expanded(
                 child: KolomCari(
                   controller: pencarianController,
-                  petunjuk: 'Cari produk atau merek',
+                  petunjuk: 'Cari produk pangan atau merek...',
                   onCari: onCari,
                   onHapus: onHapusCari,
                 ),
@@ -67,7 +67,6 @@ class BarisCariKategori extends StatelessWidget {
             children: [
               ChipKategori(
                 label: 'Semua',
-                ikon: Icons.apps,
                 terpilih: filter.kategori == null,
                 onTap: () => onPilihKategori(null),
               ),

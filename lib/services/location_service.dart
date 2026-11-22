@@ -7,6 +7,15 @@ import 'package:http/http.dart' as http;
 // - ambilLokasiSaatIni(): cek GPS + izin, lalu ambil koordinat HP.
 // - hitungJarakKm(): jarak garis lurus antara dua titik, dalam km.
 // - ambilNamaKota(): reverse geocoding dari koordinat ke nama kota.
+// Hasil pilihan lokasi dari layar peta (koordinat + nama kota hasil reverse geocoding).
+class TitikLokasi {
+  final double lat;
+  final double lng;
+  final String kota;
+
+  const TitikLokasi({required this.lat, required this.lng, required this.kota});
+}
+
 class LocationService {
   static Position? lokasiTerakhir;
 

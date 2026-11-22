@@ -5,16 +5,13 @@ import '../models/favorit_model.dart';
 import '../models/listing_model.dart';
 import '../services/location_service.dart';
 import '../theme/app_theme.dart';
-import 'baris_info.dart';
-import 'chip_lembut.dart';
 import 'foto_hero_listing.dart';
-import 'kartu_bagian.dart';
-import 'price_countdown.dart';
+import 'kartu_lelang_detail.dart';
 import 'tombol_ingatkan.dart';
 
-// Isi halaman detail listing pembeli (dipisah dari layar agar layar < 250 baris):
-// foto hero -> kartu harga -> kartu Lelang Belanda (hitung mundur + pengingat)
-// -> kartu Spesifikasi. Semua harga dari server; tidak ada hitung ulang di HP.
+// Isi Detail produk (susunan product_detail_screen Recovera lama):
+// kartu hero -> kartu harga -> Mekanisme Dutch Auction -> Spesifikasi Batch & Logistik.
+// Semua angka dari server; tidak ada hitung ulang harga di HP.
 class IsiDetailListing extends StatelessWidget {
   final ListingModel listing;
   final VoidCallback onHargaTurun;
@@ -26,12 +23,7 @@ class IsiDetailListing extends StatelessWidget {
     if (listing.jarakKm != null) return listing.jarakKm;
     final Position? lokasi = LocationService.lokasiTerakhir;
     if (lokasi == null || listing.latGudang == null || listing.lngGudang == null) return null;
-    return LocationService.hitungJarakKm(
-      lokasi.latitude,
-      lokasi.longitude,
-      listing.latGudang!,
-      listing.lngGudang!,
-    );
+    return LocationService.hitungJarakKm(lokasi.latitude, lokasi.longitude, listing.latGudang!, listing.lngGudang!);
   }
 
   @override
@@ -40,16 +32,59 @@ class IsiDetailListing extends StatelessWidget {
     final String? teksJarak = jarak == null ? null : ListingModel.formatJarak(jarak);
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(AppTheme.jarakSedang, AppTheme.jarakKecil, AppTheme.jarakSedang, AppTheme.jarakBesar),
+      padding: const EdgeInsets.fromLTRB(AppTheme.jarakInput, AppTheme.jarakLabel, AppTheme.jarakInput, AppTheme.jarakBesar),
       children: [
         FotoHeroListing(listing: listing, teksJarak: teksJarak),
         const SizedBox(height: AppTheme.jarakKecil),
         _KartuHarga(listing: listing),
         const SizedBox(height: AppTheme.jarakKecil),
-        _KartuLelang(listing: listing, onHargaTurun: onHargaTurun),
+        KartuSeksiDetail(
+          judul: 'Mekanisme Dutch Auction',
+          children: [
+            KartuLelangDetail(listing: listing, onHargaTurun: onHargaTurun),
+            const SizedBox(height: AppTheme.radiusSedang),
+            TombolIngatkan(favorit: FavoritModel.dariListing(listing)),
+          ],
+        ),
         const SizedBox(height: AppTheme.jarakKecil),
         _KartuSpesifikasi(listing: listing, teksJarak: teksJarak),
       ],
+    );
+  }
+}
+
+// Kartu putih satu seksi di Detail produk (radius 12, bayangan tipis seperti versi lama).
+class KartuSeksiDetail extends StatelessWidget {
+  final String judul;
+  final Widget? lencana;
+  final List<Widget> children;
+
+  const KartuSeksiDetail({super.key, required this.judul, this.lencana, required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.jarakSedang),
+      decoration: BoxDecoration(
+        color: AppTheme.warnaPermukaan,
+        borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
+        boxShadow: const [BoxShadow(color: AppTheme.warnaBayanganKartu, blurRadius: 6, offset: Offset(0, 1))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(judul, style: const TextStyle(fontSize: AppTheme.fontSedang, fontWeight: FontWeight.w700, color: AppTheme.warnaJudulKartu)),
+              ),
+              ?lencana,
+            ],
+          ),
+          const SizedBox(height: AppTheme.jarakKecil),
+          ...children,
+        ],
+      ),
     );
   }
 }
@@ -61,111 +96,28 @@ class _KartuHarga extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return KartuBagian(
+    return KartuSeksiDetail(
+      judul: 'Harga Lelang Saat Ini',
+      lencana: listing.diskonPersen > 0
+          ? _Lencana(teks: 'Diskon ${listing.diskonPersen}%', latar: AppTheme.warnaLatarStok, warnaTeks: AppTheme.warnaSisaAman)
+          : null,
       children: [
-        Row(
+        Wrap(
+          crossAxisAlignment: WrapCrossAlignment.end,
+          spacing: AppTheme.jarakLabel,
           children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Harga sekarang', style: TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup)),
-                  Wrap(
-                    spacing: AppTheme.jarakMini,
-                    crossAxisAlignment: WrapCrossAlignment.end,
-                    children: [
-                      Text(
-                        ListingModel.formatRupiah(listing.hargaSekarang),
-                        style: AppTheme.gayaHarga.copyWith(fontSize: AppTheme.fontBesar),
-                      ),
-                      Text('/${listing.satuan}', style: AppTheme.gayaTeksRedup.copyWith(fontSize: AppTheme.fontKecil)),
-                      Text(ListingModel.formatRupiah(listing.hargaNormal), style: AppTheme.gayaHargaCoret),
-                    ],
-                  ),
-                ],
-              ),
+            Text(
+              ListingModel.formatRupiah(listing.hargaSekarang),
+              style: const TextStyle(fontSize: AppTheme.fontBesar, fontWeight: FontWeight.w800, color: AppTheme.warnaUtama, letterSpacing: -0.3),
             ),
-            if (listing.diskonPersen > 0)
-              ChipLembut(
-                teks: '-${listing.diskonPersen}%',
-                warnaLatar: AppTheme.warnaLatarSukses,
-                warnaTeks: AppTheme.warnaSukses,
-              ),
+            Text('/ ${listing.satuan}', style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup)),
+            Text(
+              ListingModel.formatRupiah(listing.hargaNormal),
+              style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup, decoration: TextDecoration.lineThrough),
+            ),
           ],
         ),
       ],
-    );
-  }
-}
-
-class _KartuLelang extends StatelessWidget {
-  final ListingModel listing;
-  final VoidCallback onHargaTurun;
-
-  const _KartuLelang({required this.listing, required this.onHargaTurun});
-
-  @override
-  Widget build(BuildContext context) {
-    final DateTime? turunBerikutnya = listing.waktuTurunBerikutnya;
-    final String teksMinimum = ListingModel.formatRupiah(listing.hargaMinimum);
-
-    return KartuBagian(
-      judul: 'Lelang Belanda',
-      children: [
-        if (turunBerikutnya == null)
-          ChipLembut(teks: 'Harga sudah di batas terendah ($teksMinimum)')
-        else
-          PriceCountdown(
-            waktuTurun: turunBerikutnya,
-            onHargaTurun: onHargaTurun,
-            teksHargaMinimum: teksMinimum,
-          ),
-        const SizedBox(height: AppTheme.jarakKecil),
-        Row(
-          children: [
-            Expanded(
-              child: _KotakNilai(
-                label: 'Lelang berakhir',
-                nilai: '${ListingModel.formatTanggal(listing.lelangBerakhir)}, '
-                    '${ListingModel.formatJam(listing.lelangBerakhir)}',
-              ),
-            ),
-            if (listing.hargaMulai != null) ...[
-              const SizedBox(width: AppTheme.jarakKecil),
-              Expanded(
-                child: _KotakNilai(label: 'Harga mulai', nilai: ListingModel.formatRupiah(listing.hargaMulai!)),
-              ),
-            ],
-          ],
-        ),
-        const SizedBox(height: AppTheme.jarakKecil),
-        TombolIngatkan(favorit: FavoritModel.dariListing(listing)),
-      ],
-    );
-  }
-}
-
-class _KotakNilai extends StatelessWidget {
-  final String label;
-  final String nilai;
-
-  const _KotakNilai({required this.label, required this.nilai});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang, vertical: AppTheme.jarakKecil),
-      decoration: BoxDecoration(
-        border: Border.all(color: AppTheme.warnaGaris),
-        borderRadius: BorderRadius.circular(AppTheme.radiusChip),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(label, style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup)),
-          Text(nilai, style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w800)),
-        ],
-      ),
     );
   }
 }
@@ -178,31 +130,80 @@ class _KartuSpesifikasi extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final int? sisaHari = listing.sisaHari;
-    final String gudang = [listing.kotaGudang ?? '-', ?teksJarak].join(' · ');
-
-    return KartuBagian(
-      judul: 'Spesifikasi',
-      kanan: ChipLembut(
-        teks: 'Stok ${listing.stok} ${listing.satuan}',
-        warnaLatar: AppTheme.warnaLatarSukses,
-        warnaTeks: AppTheme.warnaSukses,
-      ),
+    final int? sisa = listing.sisaHari;
+    return KartuSeksiDetail(
+      judul: 'Spesifikasi Batch & Logistik',
+      lencana: _Lencana(teks: 'Stok: ${listing.stok} ${listing.satuan}', latar: AppTheme.warnaLatarStok, warnaTeks: AppTheme.warnaSisaAman),
       children: [
-        BarisInfo(label: 'Kategori', nilai: listing.kategori),
-        BarisInfo(label: 'Nomor batch', nilai: listing.nomorBatch ?? '-'),
-        BarisInfo(label: 'Penyimpanan', nilai: listing.jenisPenyimpanan ?? '-'),
-        BarisInfo(
+        _BarisSpek(label: 'Kategori', nilai: listing.kategori),
+        _BarisSpek(label: 'Merek', nilai: listing.merek ?? '-'),
+        _BarisSpek(
           label: 'Kedaluwarsa',
-          nilai: sisaHari == null
-              ? ListingModel.formatTanggal(listing.tanggalKedaluwarsa)
-              : '${ListingModel.formatTanggal(listing.tanggalKedaluwarsa)} · sisa $sisaHari hari',
-          warnaNilai: (sisaHari ?? 999) <= 14 ? AppTheme.warnaSisaHari : null,
+          nilai: ListingModel.formatTanggal(listing.tanggalKedaluwarsa),
+          lencana: sisa == null
+              ? null
+              : _Lencana(
+                  teks: sisa > 0 ? 'Sisa $sisa Hari' : 'Sudah Kedaluwarsa',
+                  latar: sisa <= 3 ? AppTheme.warnaLatarMendesak : AppTheme.warnaLatarKedaluwarsa,
+                  warnaTeks: sisa <= 3 ? AppTheme.warnaTeksMendesak : AppTheme.warnaSisaSedang,
+                ),
         ),
-        BarisInfo(label: 'Penjual', nilai: listing.namaPenjual ?? '-'),
-        BarisInfo(label: 'Gudang', nilai: gudang),
-        const BarisInfo(label: 'Metode', nilai: 'Ambil di gudang'),
+        _BarisSpek(
+          label: 'Metode Pengambilan',
+          nilai: 'Ambil di gudang (${listing.kotaGudang ?? '-'})',
+          lencana: teksJarak == null ? null : _Lencana(teks: teksJarak!, latar: AppTheme.warnaLatarNetral, warnaTeks: AppTheme.warnaTeksSedang),
+        ),
+        _BarisSpek(label: 'Penjual', nilai: listing.namaPenjual ?? '-', tanpaGaris: true),
       ],
+    );
+  }
+}
+
+// Baris "label | nilai | lencana" (_buildSimpleSpecRow lama), dipisah garis tipis.
+class _BarisSpek extends StatelessWidget {
+  final String label;
+  final String nilai;
+  final Widget? lencana;
+  final bool tanpaGaris;
+
+  const _BarisSpek({required this.label, required this.nilai, this.lencana, this.tanpaGaris = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: AppTheme.jarakLabel),
+      decoration: BoxDecoration(
+        border: tanpaGaris ? null : const Border(bottom: BorderSide(color: AppTheme.warnaLatarNetral)),
+      ),
+      child: Row(
+        children: [
+          SizedBox(
+            width: AppTheme.lebarLabelSpek,
+            child: Text(label, style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup)),
+          ),
+          Expanded(
+            child: Text(nilai, style: const TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w600, color: AppTheme.warnaJudulKartu)),
+          ),
+          if (lencana != null) ...[const SizedBox(width: AppTheme.jarakLabel), lencana!],
+        ],
+      ),
+    );
+  }
+}
+
+class _Lencana extends StatelessWidget {
+  final String teks;
+  final Color latar;
+  final Color warnaTeks;
+
+  const _Lencana({required this.teks, required this.latar, required this.warnaTeks});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakLabel, vertical: AppTheme.jarakTipis),
+      decoration: BoxDecoration(color: latar, borderRadius: BorderRadius.circular(AppTheme.jarakMini)),
+      child: Text(teks, style: TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w700, color: warnaTeks)),
     );
   }
 }

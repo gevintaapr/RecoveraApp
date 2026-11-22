@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/listing_model.dart';
 import '../theme/app_theme.dart';
-import 'chip_lembut.dart';
 
-// Baris ringkas stok yang segera kedaluwarsa (<= 14 hari) di Dasbor penjual (T5):
-// nama, stok + sisa hari di kiri; harga sekarang + harga minimum di kanan.
+// Satu baris stok yang segera kedaluwarsa di Dasbor penjual (_NearExpiryItemCard
+// Recovera lama): kotak ikon berwarna, nama + jumlah, pil sisa hari.
+// Warna: <= 3 hari merah, <= 7 hari amber, lainnya hijau (semua teks putih lolos 4.5:1).
 class KartuStokKedaluwarsa extends StatelessWidget {
   final ListingModel listing;
   final VoidCallback onTap;
@@ -14,61 +14,56 @@ class KartuStokKedaluwarsa extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.jarakKecil),
-      child: Card(
-        child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.jarakSedang),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        listing.namaProduk,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700),
-                      ),
-                      const SizedBox(height: AppTheme.jarakMini / 2),
-                      Wrap(
-                        spacing: AppTheme.jarakKecil,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Text(
-                            '${listing.stok} ${listing.satuan}',
-                            style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
-                          ),
-                          ChipLembut(
-                            teks: 'sisa ${listing.sisaHari ?? 0} hari',
-                            warnaLatar: AppTheme.warnaLatarPeringatan,
-                            warnaTeks: AppTheme.warnaTeksPeringatan,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      ListingModel.formatRupiah(listing.hargaSekarang),
-                      style: AppTheme.gayaHarga.copyWith(fontSize: AppTheme.fontSedang),
-                    ),
-                    Text(
-                      'min ${ListingModel.formatRupiah(listing.hargaMinimum)}',
-                      style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
-                    ),
-                  ],
-                ),
-              ],
+    final int sisa = listing.sisaHari ?? 0;
+    final Color warna = sisa <= 3
+        ? AppTheme.warnaSisaMendesak
+        : (sisa <= 7 ? AppTheme.warnaSisaSedang : AppTheme.warnaSisaAman);
+
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppTheme.radiusSedang),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppTheme.jarakMini),
+        child: Row(
+          children: [
+            Container(
+              width: AppTheme.kotakIkonStok,
+              height: AppTheme.kotakIkonStok,
+              decoration: BoxDecoration(
+                color: warna.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(AppTheme.radiusSedang),
+                border: Border.all(color: warna.withValues(alpha: 0.3)),
+              ),
+              child: Icon(Icons.inventory_2_rounded, size: AppTheme.ikonNav, color: warna),
             ),
-          ),
+            const SizedBox(width: AppTheme.jarakSedang),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing.namaProduk,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w600, color: AppTheme.warnaNavy),
+                  ),
+                  const SizedBox(height: AppTheme.jarakTipis),
+                  Text(
+                    '${listing.stok} ${listing.satuan} • ${ListingModel.formatRupiah(listing.hargaSekarang)}',
+                    style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+                  ),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakKecil, vertical: AppTheme.jarakMini),
+              decoration: BoxDecoration(color: warna, borderRadius: BorderRadius.circular(AppTheme.radiusKapsul)),
+              child: Text(
+                sisa <= 0 ? 'Kedaluwarsa' : '$sisa hari lagi',
+                style: const TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w700, color: AppTheme.warnaPermukaan),
+              ),
+            ),
+          ],
         ),
       ),
     );

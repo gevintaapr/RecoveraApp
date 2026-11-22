@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 // Stepper upload stok penjual: 1 Faktur, 2 Data, 3 Harga, 4 Terbit.
-// Langkah sebelum langkahAktif = selesai (centang), langkahAktif = biru, sisanya abu.
+// Gaya stepper Upload Stok Recovera lama: selesai = hijau + centang,
+// aktif = biru, sisanya putih bergaris abu.
 class IndikatorLangkah extends StatelessWidget {
   final int langkahAktif; // 1 sampai 4
 
@@ -42,6 +43,8 @@ class _ItemLangkah extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool terisi = aktif || selesai;
+    // Hijau/biru versi gelap agar ikon & teks putih lolos kontras.
+    final Color warna = selesai ? AppTheme.warnaSisaAman : AppTheme.warnaJarak;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -51,8 +54,8 @@ class _ItemLangkah extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: terisi ? AppTheme.warnaUtama : AppTheme.warnaPermukaan,
-            border: terisi ? null : Border.all(color: AppTheme.warnaGarisTegas, width: 2),
+            color: terisi ? warna : AppTheme.warnaPermukaan,
+            border: terisi ? null : Border.all(color: AppTheme.warnaGarisCari, width: 1.5),
           ),
           child: selesai
               ? const Icon(Icons.check, size: AppTheme.fontSubjudul, color: AppTheme.warnaPermukaan)
@@ -70,8 +73,8 @@ class _ItemLangkah extends StatelessWidget {
           label,
           style: TextStyle(
             fontSize: AppTheme.fontLabel,
-            fontWeight: terisi ? FontWeight.w700 : FontWeight.w600,
-            color: terisi ? AppTheme.warnaUtama : AppTheme.warnaTeksRedup,
+            fontWeight: terisi ? FontWeight.w700 : FontWeight.w500,
+            color: terisi ? warna : AppTheme.warnaTeksRedup,
           ),
         ),
       ],
@@ -91,7 +94,7 @@ class _GarisPenghubung extends StatelessWidget {
         height: 2,
         // Sejajarkan garis dengan tengah lingkaran, bukan dengan label.
         margin: const EdgeInsets.only(bottom: AppTheme.fontLabel + AppTheme.jarakKecil),
-        color: selesai ? AppTheme.warnaUtama : AppTheme.warnaGarisTegas,
+        color: selesai ? AppTheme.warnaJarak : AppTheme.warnaGaris,
       ),
     );
   }

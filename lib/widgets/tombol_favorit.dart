@@ -9,11 +9,13 @@ import 'notifikasi_glass.dart';
 // Ikon hati dalam kotak kecil untuk menyimpan / menghapus favorit.
 // Obx membuat ikon ikut berubah di semua tempat sekaligus
 // (kartu katalog, detail, halaman Favorit) saat daftar favorit berubah.
-// Kotak terlihat 32, area ketuk 44.
+// Kotak terlihat 32, area ketuk 44. bulat = lingkaran putih berbayang untuk
+// ditempel di atas foto (kartu produk).
 class TombolFavorit extends StatelessWidget {
   final FavoritModel favorit;
+  final bool bulat;
 
-  const TombolFavorit({super.key, required this.favorit});
+  const TombolFavorit({super.key, required this.favorit, this.bulat = false});
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +33,16 @@ class TombolFavorit extends StatelessWidget {
         icon: Container(
           width: AppTheme.ukuranTombolKecil,
           height: AppTheme.ukuranTombolKecil,
-          decoration: BoxDecoration(
-            color: sudahFavorit ? AppTheme.warnaLatarBahaya : AppTheme.warnaLatarNetral,
-            borderRadius: BorderRadius.circular(AppTheme.radiusChip),
-          ),
+          decoration: bulat
+              ? const BoxDecoration(
+                  color: AppTheme.warnaPermukaan,
+                  shape: BoxShape.circle,
+                  boxShadow: [BoxShadow(color: AppTheme.warnaBayanganAvatar, blurRadius: 6, offset: Offset(0, 2))],
+                )
+              : BoxDecoration(
+                  color: sudahFavorit ? AppTheme.warnaLatarBahaya : AppTheme.warnaLatarNetral,
+                  borderRadius: BorderRadius.circular(AppTheme.radiusChip),
+                ),
           child: Icon(
             sudahFavorit ? Icons.favorite : Icons.favorite_border,
             size: AppTheme.ikonKecil,

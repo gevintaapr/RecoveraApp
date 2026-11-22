@@ -1,11 +1,9 @@
-import 'dart:ui' show ImageFilter;
-
 import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Tombol ikon bulat berefek kaca untuk di atas header bergradien (favorit, lonceng).
-// jumlahBadge > 0 menampilkan angka di pojok kanan atas.
+// Tombol ikon bulat di atas header biru (gaya Recovera lama: putih 18% + garis
+// putih 30%), dipakai untuk Favorit dan Notifikasi. jumlahBadge > 0 menampilkan angka.
 class TombolIkonKaca extends StatelessWidget {
   final IconData ikon;
   final String keterangan; // dibacakan pembaca layar, juga tooltip
@@ -29,31 +27,16 @@ class TombolIkonKaca extends StatelessWidget {
         label: Text('$jumlahBadge'),
         backgroundColor: AppTheme.warnaAksen,
         textColor: AppTheme.warnaPermukaan,
-        child: ClipOval(
-          // CATATAN: Menggunakan BackdropFilter + ImageFilter.blur (elemen di luar modul)
-          // Fungsi: memburamkan gradien di belakang tombol (efek kaca).
-          // Alasan: desain Ocean Glass memakai kaca sebagai aksen di header.
-          // Cara kerja: BackdropFilter mengaburkan apa pun di belakangnya, lalu
-          //         lapisan putih 16% + garis putih 35% digambar di atasnya.
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: AppTheme.blurKaca, sigmaY: AppTheme.blurKaca),
-            child: Material(
-              color: AppTheme.warnaKaca,
-              shape: const CircleBorder(side: BorderSide(color: AppTheme.warnaGarisKaca)),
-              child: InkWell(
-                customBorder: const CircleBorder(),
-                onTap: onPressed,
-                child: SizedBox(
-                  width: AppTheme.ukuranTombolIkon,
-                  height: AppTheme.ukuranTombolIkon,
-                  child: Icon(
-                    ikon,
-                    size: AppTheme.ikonSedang,
-                    color: AppTheme.warnaPermukaan,
-                    semanticLabel: keterangan,
-                  ),
-                ),
-              ),
+        child: Material(
+          color: AppTheme.warnaPutih18,
+          shape: const CircleBorder(side: BorderSide(color: AppTheme.warnaPutih30)),
+          child: InkWell(
+            customBorder: const CircleBorder(),
+            onTap: onPressed,
+            child: SizedBox(
+              width: AppTheme.ukuranTombolIkon,
+              height: AppTheme.ukuranTombolIkon,
+              child: Icon(ikon, size: AppTheme.ikonNav, color: AppTheme.warnaPermukaan, semanticLabel: keterangan),
             ),
           ),
         ),

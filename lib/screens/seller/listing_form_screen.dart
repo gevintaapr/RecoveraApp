@@ -383,11 +383,14 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
           children: [
             Expanded(
               child: OutlinedButton(
-                style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(AppTheme.tinggiTombol)),
+                style: OutlinedButton.styleFrom(
+                  minimumSize: const Size.fromHeight(AppTheme.tinggiTombol),
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang),
+                ),
                 onPressed: _sedangMemproses
                     ? null
                     : (tahapForm ? _simpanDraftLokal : _bukaDialogUbahHargaAwal),
-                child: Text(tahapForm ? 'Simpan draft' : 'Atur manual'),
+                child: Text(tahapForm ? 'Simpan draft' : 'Atur manual', maxLines: 1, softWrap: false),
               ),
             ),
             const SizedBox(width: AppTheme.jarakKecil),

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'indikator_langkah.dart';
 
-// AppBar putih untuk alur upload stok penjual: judul "Upload stok" di tengah
+// AppBar terang untuk alur upload stok penjual: judul "Upload Stok" di tengah
 // dan stepper 4 langkah (Faktur, Data, Harga, Terbit) di bawahnya.
 class AppBarUpload extends StatelessWidget implements PreferredSizeWidget {
   final int langkahAktif;
@@ -21,16 +21,16 @@ class AppBarUpload extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       // Latar putih (karena ada stepper), jadi ikon & judul dibuat navy agar back terlihat.
-      backgroundColor: AppTheme.warnaPermukaan,
+      // Latar terang seperti Upload Stok Recovera lama; ikon & judul navy.
+      backgroundColor: AppTheme.warnaLatar,
       foregroundColor: AppTheme.warnaNavy,
       titleTextStyle: const TextStyle(
-        fontSize: AppTheme.fontSubjudul,
-        fontWeight: FontWeight.w700,
+        fontSize: AppTheme.fontJudulTransaksi,
+        fontWeight: FontWeight.w800,
         color: AppTheme.warnaNavy,
       ),
       centerTitle: true,
-      title: const Text('Upload stok'),
-      shape: const Border(bottom: BorderSide(color: AppTheme.warnaGaris)),
+      title: const Text('Upload Stok'),
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(_tinggiStepper),
         child: Padding(

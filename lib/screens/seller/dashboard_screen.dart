@@ -5,13 +5,13 @@ import '../../models/order_model.dart';
 import '../../models/user_model.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/app_bar_transaksi.dart';
+import '../../widgets/bar_aksi_cepat.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/header_dasbor.dart';
-import '../../widgets/judul_bagian.dart';
 import '../../widgets/kartu_angka.dart';
-import '../../widgets/kartu_pesanan.dart';
+import '../../widgets/kartu_pesanan_menunggu.dart';
 import '../../widgets/kartu_stok_kedaluwarsa.dart';
-import '../../widgets/kartu_upload_faktur.dart';
 import '../auth/login_screen.dart';
 import '../shared/orders_screen.dart';
 import 'listing_detail_screen.dart';
@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Semua pesanan masuk')),
+          appBar: const AppBarTransaksi(judul: 'Kelola Pesanan'),
           body: const OrdersScreen(isPenjual: true),
         ),
       ),
@@ -134,64 +134,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               HeaderDasbor(profil: data.profil),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakTepi),
+                padding: const EdgeInsets.fromLTRB(AppTheme.jarakBesar, AppTheme.jarakTepi, AppTheme.jarakBesar, 0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    // Kartu bento 2x2 (GridView, Modul II). Angka dari data server.
                     GridView.count(
                       crossAxisCount: 2,
+                      // padding nol: tanpa ini GridView ikut menambah jarak bawah selebar bar navigasi.
+                      padding: EdgeInsets.zero,
+                      clipBehavior: Clip.none, // bayangan kartu baris bawah tidak terpotong
                       childAspectRatio: AppTheme.rasioKotakRingkasan,
-                      mainAxisSpacing: AppTheme.jarakKecil,
-                      crossAxisSpacing: AppTheme.jarakKecil,
+                      mainAxisSpacing: AppTheme.jarakSedang,
+                      crossAxisSpacing: AppTheme.jarakSedang,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
                       children: [
-                        KartuAngka(label: 'Lelang aktif', nilai: '$stokAktif', onTap: widget.onPindahKeStok),
                         KartuAngka(
-                          label: 'Perlu diproses',
-                          nilai: '${perluDiproses.length}',
-                          warnaNilai: AppTheme.warnaAksen,
-                          onTap: _bukaSemuaPesanan,
+                          label: 'Stok Aktif',
+                          nilai: '$stokAktif',
+                          ikon: Icons.inventory,
+                          keterangan: 'Lelang sedang tayang',
+                          onTap: widget.onPindahKeStok,
                         ),
                         KartuAngka(
-                          label: 'Transaksi bulan ini',
+                          label: 'Transaksi Bulan Ini',
                           nilai: '$transaksiBulanIni',
-                          warnaNilai: AppTheme.warnaUtama,
+                          ikon: Icons.receipt_long,
+                          warna: AppTheme.warnaSukses,
+                          keterangan: 'Pesanan bulan berjalan',
                         ),
                         KartuAngka(
-                          label: 'Segera kedaluwarsa',
+                          label: 'Segera Kedaluwarsa',
                           nilai: '${segeraKedaluwarsa.length}',
-                          warnaNilai: AppTheme.warnaSisaHari,
-                          keterangan: 'sisa 14 hari atau kurang',
+                          ikon: Icons.warning_amber_rounded,
+                          warna: AppTheme.warnaSisaSedang,
+                          keterangan: '14 hari atau kurang',
+                        ),
+                        KartuAngka(
+                          label: 'Perlu Diproses',
+                          nilai: '${perluDiproses.length}',
+                          ikon: Icons.pending_actions_rounded,
+                          warna: AppTheme.warnaGalatTeks,
+                          keterangan: 'Belum selesai diambil',
+                          onTap: _bukaSemuaPesanan,
                         ),
                       ],
                     ),
-                    const SizedBox(height: AppTheme.jarakKecil),
-                    KartuUploadFaktur(onTap: _bukaUploadStok),
-                    JudulBagian(
-                      judul: 'Perlu disiapkan (${perluDiproses.length})',
-                      teksTautan: 'Lihat semua',
-                      onTautan: _bukaSemuaPesanan,
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    BarAksiCepat(
+                      onUploadStok: _bukaUploadStok,
+                      onBukaStok: () => widget.onPindahKeStok?.call(),
+                      onBukaPesanan: _bukaSemuaPesanan,
                     ),
-                    if (perluDiproses.isEmpty)
-                      const EmptyState(ikon: Icons.task_alt_rounded, pesan: 'Semua pesanan sudah diproses.')
-                    else
-                      ...perluDiproses.map(
-                        (pesanan) => KartuPesanan(pesanan: pesanan, isPenjual: true, onKembali: _muatUlang),
-                      ),
-                    if (segeraKedaluwarsa.isNotEmpty) ...[
-                      JudulBagian(
-                        judul: 'Segera kedaluwarsa (${segeraKedaluwarsa.length})',
-                        teksTautan: 'Kelola stok',
-                        onTautan: widget.onPindahKeStok,
-                      ),
-                      ...segeraKedaluwarsa.take(3).map(
-                            (listing) => KartuStokKedaluwarsa(
-                              listing: listing,
-                              onTap: () => _bukaDetailStok(listing.id),
-                            ),
-                          ),
-                    ],
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    _KartuStokMendekati(daftar: segeraKedaluwarsa, onBuka: _bukaDetailStok),
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    KartuPesananMenunggu(
+                      daftarPesanan: perluDiproses,
+                      onBerubah: _muatUlang,
+                      onLihatSemua: _bukaSemuaPesanan,
+                    ),
                   ],
                 ),
               ),
@@ -199,6 +202,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+// Kartu putih "Stok Mendekati Kedaluwarsa" berisi baris stok (maks. 5).
+class _KartuStokMendekati extends StatelessWidget {
+  final List<ListingModel> daftar;
+  final ValueChanged<int> onBuka;
+
+  const _KartuStokMendekati({required this.daftar, required this.onBuka});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppTheme.jarakTepi),
+      decoration: BoxDecoration(color: AppTheme.warnaPermukaan, borderRadius: BorderRadius.circular(AppTheme.radius)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'Stok Mendekati Kedaluwarsa',
+            style: TextStyle(fontSize: AppTheme.fontSedang, fontWeight: FontWeight.w700, color: AppTheme.warnaNavy),
+          ),
+          const SizedBox(height: AppTheme.jarakKecil),
+          if (daftar.isEmpty)
+            const Text('Tidak ada stok yang mendekati kedaluwarsa.', style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup))
+          else
+            ...daftar.take(5).map((listing) => KartuStokKedaluwarsa(listing: listing, onTap: () => onBuka(listing.id))),
+        ],
+      ),
     );
   }
 }

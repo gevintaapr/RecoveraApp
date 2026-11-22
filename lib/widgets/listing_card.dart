@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import '../models/favorit_model.dart';
 import '../models/listing_model.dart';
 import '../theme/app_theme.dart';
-import 'chip_lembut.dart';
+import 'foto_kartu_produk.dart';
 import 'price_countdown.dart';
 import 'status_badge.dart';
 import 'tombol_favorit.dart';
 
-// Kartu satu listing versi daftar (Katalog pembeli & Stok penjual):
-// - kiri: foto 84x84 + pita diskon
-// - kanan atas: nama penjual (kapital kecil) dan "Sisa X hari"
-// - nama produk, chip hitung mundur "turun ..", jarak & kota gudang
-// - bawah: harga / satuan + harga normal coret, lalu tombol hati (pembeli)
+// Kartu satu listing (ProductCard Recovera lama), dipakai Beranda pembeli & Stok penjual:
+// - kiri: foto 88 + pita diskon merah + badge beku/dingin
+// - tengah: NAMA PERUSAHAAN, nama produk, merek, hitung mundur harga, jarak • kota, harga
+// - kanan: "Sisa X Hari" (warna sesuai urgensi), lalu hati + panah (pembeli)
 //   atau badge status (penjual)
 class ListingCard extends StatelessWidget {
   final ListingModel listing;
@@ -31,30 +30,61 @@ class ListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.jarakKecil),
-      child: Card(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppTheme.radiusBesar),
-          side: const BorderSide(color: AppTheme.warnaGaris),
-        ),
+      padding: const EdgeInsets.only(bottom: AppTheme.jarakSedang),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
         child: InkWell(
-          borderRadius: BorderRadius.circular(AppTheme.radiusBesar),
+          borderRadius: BorderRadius.circular(AppTheme.radius),
           onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppTheme.jarakSedang),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _FotoProduk(urlGambar: listing.urlGambar, diskonPersen: listing.diskonPersen),
-                const SizedBox(width: AppTheme.jarakSedang),
-                Expanded(
-                  child: _InfoListing(
-                    listing: listing,
-                    untukPenjual: untukPenjual,
-                    onHargaTurun: onHargaTurun,
-                  ),
-                ),
+          child: Ink(
+            decoration: BoxDecoration(
+              color: AppTheme.warnaPermukaan,
+              borderRadius: BorderRadius.circular(AppTheme.radius),
+              border: Border.all(color: AppTheme.warnaGaris),
+              boxShadow: const [
+                BoxShadow(color: AppTheme.warnaBayanganKartu, blurRadius: 8, offset: Offset(0, 2)),
               ],
+            ),
+            padding: const EdgeInsets.all(AppTheme.jarakSedang),
+            child: IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Hati favorit menempel di pojok kanan bawah foto, supaya kolom kanan
+                  // hanya berisi panah seperti kartu lama dan nama produk tidak terpotong.
+                  Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      FotoKartuProduk(
+                        urlGambar: listing.urlGambar,
+                        diskonPersen: listing.diskonPersen,
+                        jenisPenyimpanan: listing.jenisPenyimpanan,
+                      ),
+                      if (!untukPenjual)
+                        Positioned(
+                          right: -AppTheme.jarakKecil,
+                          bottom: -AppTheme.jarakKecil,
+                          child: TombolFavorit(favorit: FavoritModel.dariListing(listing), bulat: true),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: AppTheme.jarakSedang),
+                  Expanded(child: _InfoTengah(listing: listing, untukPenjual: untukPenjual, onHargaTurun: onHargaTurun)),
+                  const SizedBox(width: AppTheme.jarakKecil),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _TeksSisaHari(sisaHari: listing.sisaHari),
+                      if (untukPenjual)
+                        StatusBadge(status: listing.status, label: listing.labelStatus)
+                      else
+                        _TombolPanah(onTap: onTap),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -63,168 +93,157 @@ class ListingCard extends StatelessWidget {
   }
 }
 
-class _InfoListing extends StatelessWidget {
+class _InfoTengah extends StatelessWidget {
   final ListingModel listing;
   final bool untukPenjual;
   final VoidCallback? onHargaTurun;
 
-  const _InfoListing({required this.listing, required this.untukPenjual, this.onHargaTurun});
+  const _InfoTengah({required this.listing, required this.untukPenjual, this.onHargaTurun});
 
   @override
   Widget build(BuildContext context) {
-    final String labelAtas = untukPenjual
-        ? 'Stok ${listing.stok} ${listing.satuan}'
-        : (listing.namaPenjual ?? '');
-    final int? sisaHari = listing.sisaHari;
-    final List<String> lokasi = [
-      if (listing.jarakKm != null) ListingModel.formatJarak(listing.jarakKm!),
-      if (listing.kotaGudang != null && listing.kotaGudang!.isNotEmpty) listing.kotaGudang!,
-    ];
-    final bool diHargaMinimum = listing.hargaSekarang <= listing.hargaMinimum;
-    final bool tampilHitungMundur =
-        listing.status == 'active' && listing.waktuTurunBerikutnya != null && !diHargaMinimum;
+    final String labelAtas = untukPenjual ? 'Stok ${listing.stok} ${listing.satuan}' : (listing.namaPenjual ?? '');
+    final bool tampilHitungMundur = listing.status == 'active' &&
+        listing.waktuTurunBerikutnya != null &&
+        listing.hargaSekarang > listing.hargaMinimum;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Row(
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(
-              child: Text(
-                labelAtas.toUpperCase(),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTheme.gayaLabelKapital,
+            Text(
+              labelAtas.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: AppTheme.fontMini,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warnaTeksRedup,
+                letterSpacing: 0.5,
               ),
             ),
-            if (sisaHari != null) ...[
-              const SizedBox(width: AppTheme.jarakKecil),
-              Text(
-                'Sisa $sisaHari hari',
-                style: TextStyle(
-                  fontSize: AppTheme.fontLabel,
-                  fontWeight: FontWeight.w700,
-                  // Amber = perlu segera dibeli (<= 14 hari), hijau = masih lama.
-                  color: sisaHari <= 14 ? AppTheme.warnaSisaHari : AppTheme.warnaSukses,
-                ),
+            const SizedBox(height: AppTheme.jarakTipis),
+            Text(
+              listing.namaProduk,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: AppTheme.fontInput,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.warnaJudulKartu,
+                height: 1.25,
               ),
+            ),
+            if (listing.merek != null && listing.merek!.isNotEmpty)
+              Text(
+                listing.merek!,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+              ),
+            if (tampilHitungMundur) ...[
+              const SizedBox(height: AppTheme.jarakMini),
+              PriceCountdown(waktuTurun: listing.waktuTurunBerikutnya!, onHargaTurun: onHargaTurun, ringkas: true),
             ],
           ],
         ),
-        const SizedBox(height: AppTheme.jarakMini / 2),
-        Text(
-          listing.namaProduk,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: const TextStyle(
-            fontSize: AppTheme.fontSedang,
-            fontWeight: FontWeight.w700,
-            color: AppTheme.warnaTeks,
-          ),
-        ),
         const SizedBox(height: AppTheme.jarakMini),
-        Wrap(
-          spacing: AppTheme.jarakKecil,
-          runSpacing: AppTheme.jarakMini / 2,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            if (tampilHitungMundur)
-              PriceCountdown(
-                waktuTurun: listing.waktuTurunBerikutnya!,
-                onHargaTurun: onHargaTurun,
-                ringkas: true,
-              )
-            else if (diHargaMinimum && listing.status == 'active')
-              const ChipLembut(teks: 'harga minimum'),
-            if (lokasi.isNotEmpty)
+        if (listing.jarakKm != null || listing.kotaGudang != null)
+          Row(
+            children: [
+              if (listing.jarakKm != null) ...[
+                const Icon(Icons.near_me_outlined, size: AppTheme.fontKecil, color: AppTheme.warnaJarak),
+                const SizedBox(width: AppTheme.jarakTipis),
+                Text(
+                  ListingModel.formatJarak(listing.jarakKm!),
+                  style: const TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w600, color: AppTheme.warnaJarak),
+                ),
+                const Text('  •  ', style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup)),
+              ],
+              Flexible(
+                child: Text(
+                  listing.kotaGudang ?? '-',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: AppTheme.jarakMini),
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
               Text(
-                lokasi.join(' · '),
-                style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksSedang),
+                ListingModel.formatRupiah(listing.hargaSekarang),
+                style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w800, color: AppTheme.warnaUtama),
               ),
-          ],
-        ),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            Expanded(
-              child: Wrap(
-                crossAxisAlignment: WrapCrossAlignment.end,
-                spacing: AppTheme.jarakMini,
-                children: [
-                  Text(ListingModel.formatRupiah(listing.hargaSekarang), style: AppTheme.gayaHarga),
-                  Text('/${listing.satuan}', style: AppTheme.gayaTeksRedup.copyWith(fontSize: AppTheme.fontLabel)),
-                  Text(
-                    ListingModel.formatRupiah(listing.hargaNormal),
-                    style: AppTheme.gayaHargaCoret.copyWith(fontSize: AppTheme.fontLabel),
-                  ),
-                ],
+              const SizedBox(width: AppTheme.jarakMini),
+              Text(
+                '/ ${listing.satuan}',
+                style: const TextStyle(fontSize: AppTheme.fontMini, fontWeight: FontWeight.w500, color: AppTheme.warnaTeksRedup),
               ),
-            ),
-            if (untukPenjual)
-              StatusBadge(status: listing.status, label: listing.labelStatus)
-            else
-              TombolFavorit(favorit: FavoritModel.dariListing(listing)),
-          ],
+              const SizedBox(width: AppTheme.jarakMini),
+              Text(
+                ListingModel.formatRupiah(listing.hargaNormal),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontMini,
+                  color: AppTheme.warnaTeksRedup,
+                  decoration: TextDecoration.lineThrough,
+                ),
+              ),
+            ],
+          ),
         ),
       ],
     );
   }
 }
 
-// Foto dari internet dengan pita diskon menempel di tepi kiri.
-class _FotoProduk extends StatelessWidget {
-  final String? urlGambar;
-  final int diskonPersen;
+// "Sisa X Hari" tanpa latar, warnanya menandai urgensi (seperti _ExpiryBadge lama).
+class _TeksSisaHari extends StatelessWidget {
+  final int? sisaHari;
 
-  const _FotoProduk({required this.urlGambar, required this.diskonPersen});
+  const _TeksSisaHari({required this.sisaHari});
 
   @override
   Widget build(BuildContext context) {
-    const Widget fotoCadangan = ColoredBox(
-      color: AppTheme.warnaLatarNetral,
-      child: Center(
-        child: Icon(Icons.inventory_2_outlined, size: AppTheme.ikonSedang, color: AppTheme.warnaTeksRedup),
-      ),
+    if (sisaHari == null) return const SizedBox.shrink();
+    final int hari = sisaHari!;
+    final Color warna = hari <= 3
+        ? AppTheme.warnaSisaMendesak
+        : (hari <= 7 ? AppTheme.warnaSisaSedang : AppTheme.warnaSisaAman);
+    return Text(
+      hari <= 0 ? 'Sudah Kedaluwarsa' : 'Sisa $hari Hari',
+      style: TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w600, color: warna),
     );
+  }
+}
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
-      child: SizedBox(
-        width: AppTheme.gambarKartu,
-        height: AppTheme.gambarKartu,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: (urlGambar == null || urlGambar!.isEmpty)
-                  ? fotoCadangan
-                  : Image.network(
-                      urlGambar!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) => fotoCadangan,
-                    ),
-            ),
-            if (diskonPersen > 0)
-              Positioned(
-                top: AppTheme.jarakKecil,
-                left: 0,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakMini, vertical: AppTheme.jarakMini / 2),
-                  decoration: const BoxDecoration(
-                    color: AppTheme.warnaAksen,
-                    borderRadius: BorderRadius.horizontal(right: Radius.circular(AppTheme.radiusChip)),
-                  ),
-                  child: Text(
-                    '-$diskonPersen%',
-                    style: const TextStyle(
-                      color: AppTheme.warnaPermukaan,
-                      fontWeight: FontWeight.w800,
-                      fontSize: AppTheme.fontLabel,
-                    ),
-                  ),
-                ),
-              ),
-          ],
-        ),
+// Tombol kotak biru berpanah untuk membuka detail. Terlihat 28, area ketuk 44.
+class _TombolPanah extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _TombolPanah({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: 'Lihat detail',
+      onPressed: onTap,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints(minWidth: AppTheme.ukuranTombolIkon, minHeight: AppTheme.ukuranTombolIkon),
+      icon: Container(
+        width: AppTheme.tombolPanah,
+        height: AppTheme.tombolPanah,
+        decoration: BoxDecoration(color: AppTheme.warnaUtama, borderRadius: BorderRadius.circular(AppTheme.radiusSedang)),
+        child: const Icon(Icons.arrow_forward_rounded, color: AppTheme.warnaPermukaan, size: AppTheme.ikonPanah),
       ),
     );
   }

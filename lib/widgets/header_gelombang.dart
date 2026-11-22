@@ -26,14 +26,29 @@ class HeaderGelombang extends StatelessWidget {
           Positioned.fill(
             child: ClipPath(
               clipper: _PemotongGelombangBelakang(),
-              child: const ColoredBox(color: AppTheme.warnaGelombang),
+              child: const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppTheme.warnaGelombangKiri, AppTheme.warnaGelombangKanan],
+                  ),
+                ),
+              ),
             ),
           ),
           ClipPath(
             clipper: _PemotongGelombangDepan(),
             child: Container(
               width: double.infinity,
-              color: AppTheme.warnaUtama,
+              // Gradien header Beranda Recovera lama: primaryDark -> primary.
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppTheme.warnaUtamaGelap, AppTheme.warnaUtama],
+                ),
+              ),
               padding: const EdgeInsets.only(bottom: AppTheme.tinggiGelombang),
               child: SafeArea(
                 bottom: false,

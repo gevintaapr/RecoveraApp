@@ -5,7 +5,8 @@ import '../../controllers/favorit_controller.dart';
 import '../../controllers/notifikasi_controller.dart';
 import '../../routes/app_routes.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/bar_navigasi_kaca.dart';
+import '../../widgets/app_bar_transaksi.dart';
+import '../../widgets/bar_navigasi_mengambang.dart';
 import '../buyer/catalog_screen.dart';
 import '../seller/dashboard_screen.dart';
 import '../seller/stock_screen.dart';
@@ -45,17 +46,22 @@ class _MainShellState extends State<MainShell> {
 
   bool get isPenjual => widget.peran == 'seller';
 
-  // Tab pertama (Katalog / Dasbor) punya header gelombang sendiri.
-  bool get _pakaiHeaderSendiri => _selectedIndex == 0;
+  // Beranda (tab pertama) dan Profil (tab terakhir) punya header gelombang sendiri.
+  bool get _pakaiHeaderSendiri => _selectedIndex == 0 || _selectedIndex == _judulTab.length - 1;
 
-  // Judul tab sesuai peran (panduan 3.2 dan 3.3).
+  // Label & ikon tab mengikuti bottom nav Recovera lama (tanpa tab Game).
   List<String> get _judulTab => isPenjual
-      ? ['Dasbor', 'Stok', 'Profil']
-      : ['Katalog', 'Pesanan', 'Profil'];
+      ? ['Beranda', 'Stok', 'Profil']
+      : ['Beranda', 'Riwayat', 'Profil'];
 
   List<IconData> get _ikonTab => isPenjual
-      ? [Icons.dashboard_outlined, Icons.inventory_2_outlined, Icons.person_outline]
-      : [Icons.storefront_outlined, Icons.receipt_long_outlined, Icons.person_outline];
+      ? [Icons.home_outlined, Icons.inventory_2_outlined, Icons.person_outline_rounded]
+      : [Icons.home_outlined, Icons.receipt_long_outlined, Icons.person_outline_rounded];
+
+  // Ikon versi terisi untuk tab yang sedang aktif.
+  List<IconData> get _ikonTabAktif => isPenjual
+      ? [Icons.home_rounded, Icons.inventory_2_rounded, Icons.person_rounded]
+      : [Icons.home_rounded, Icons.receipt_long, Icons.person_rounded];
 
   // Array halaman: yang tampil = _pages[_selectedIndex].
   List<Widget> get _pages => isPenjual
@@ -84,27 +90,33 @@ class _MainShellState extends State<MainShell> {
         // favorit untuk pembeli), jadi AppBar hanya dipakai di tab lain.
         appBar: _pakaiHeaderSendiri
             ? null
-            : AppBar(
-                title: Text(_judulTab[_selectedIndex]),
-                actions: [
-                  // Ikon Favorit + badge jumlah, hanya untuk pembeli.
-                  if (!isPenjual) const _IkonFavorit(),
-                  const _IkonNotifikasi(),
-                ],
-              ),
-        // extendBody: isi layar tergulir di belakang bar navigasi kaca.
+            : (isPenjual
+                // Tab Stok penjual: AppBar bergradien yang sama dengan Riwayat pembeli.
+                ? const AppBarTransaksi(
+                    judul: 'Inventaris Gudang',
+                    ikon: Icons.inventory_2_rounded,
+                    tampilkanKembali: false,
+                    actions: [_IkonNotifikasi()],
+                  )
+                // Tab Riwayat pembeli: AppBar bergradien seperti Riwayat Transaksi lama.
+                : const AppBarTransaksi(
+                    judul: 'Riwayat Transaksi',
+                    tampilkanKembali: false,
+                    actions: [_IkonFavorit(), _IkonNotifikasi()],
+                  )),
+        // extendBody: isi layar terlihat di sela & di belakang bar yang mengambang.
         // Setiap tab memberi jarak bawah setinggi bar (MediaQuery.paddingOf).
         extendBody: true,
         body: _pages[_selectedIndex],
-        bottomNavigationBar: BarNavigasiKaca(
+        bottomNavigationBar: BarNavigasiMengambang(
           child: BottomNavigationBar(
             currentIndex: _selectedIndex,
             onTap: _pindahTab,
             items: List.generate(
               _judulTab.length,
               (i) => BottomNavigationBarItem(
-                icon: Icon(_ikonTab[i], size: AppTheme.ikonSedang),
-                activeIcon: BarNavigasiKaca.ikonAktif(_ikonTab[i]),
+                icon: Icon(_ikonTab[i], size: AppTheme.ikonNav),
+                activeIcon: BarNavigasiMengambang.ikonAktif(_ikonTabAktif[i]),
                 label: _judulTab[i],
               ),
             ),

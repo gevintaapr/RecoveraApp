@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Kolom pencarian berbentuk kapsul. Tombol hapus muncul saat ada teks.
-// Dipakai di Katalog (cari produk) dan Stok penjual (cari stok).
+// Kolom pencarian kapsul putih bergaris (search bar Beranda Recovera lama).
+// Tombol hapus muncul saat ada teks. Dipakai di Beranda dan Stok penjual.
 class KolomCari extends StatelessWidget {
   final TextEditingController controller;
   final String petunjuk;
@@ -24,24 +24,30 @@ class KolomCari extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final OutlineInputBorder garis = OutlineInputBorder(
+      borderRadius: BorderRadius.circular(AppTheme.radiusKapsul),
+      borderSide: const BorderSide(color: AppTheme.warnaGarisCari),
+    );
     return SizedBox(
-      height: AppTheme.tinggiInput,
+      height: AppTheme.ukuranTombolIkon,
       child: TextField(
         controller: controller,
         textInputAction: TextInputAction.search,
         onSubmitted: (_) => onCari(),
         onChanged: onChanged,
-        style: const TextStyle(fontSize: AppTheme.fontSedang, color: AppTheme.warnaTeks),
+        style: const TextStyle(fontSize: AppTheme.fontInput, fontWeight: FontWeight.w500, color: AppTheme.warnaNavy),
         decoration: InputDecoration(
           hintText: petunjuk,
           fillColor: warnaLatar,
           contentPadding: EdgeInsets.zero,
-          prefixIcon: const Icon(Icons.search, size: AppTheme.ikonKecil, color: AppTheme.warnaTeksSedang),
+          border: garis,
+          enabledBorder: garis,
+          prefixIcon: const Icon(Icons.search_rounded, size: AppTheme.ikonMata, color: AppTheme.warnaTeksRedup),
           suffixIcon: controller.text.isEmpty
               ? null
               : IconButton(
                   tooltip: 'Hapus pencarian',
-                  icon: const Icon(Icons.close, size: AppTheme.ikonKecil),
+                  icon: const Icon(Icons.clear, size: AppTheme.ikonKecil),
                   onPressed: onHapus,
                 ),
         ),

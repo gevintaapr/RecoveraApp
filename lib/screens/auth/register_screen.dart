@@ -1,19 +1,24 @@
 import 'package:flutter/material.dart';
 
-import 'package:geolocator/geolocator.dart';
-
 import '../../services/api_service.dart';
 import '../../services/location_service.dart';
 import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/dialog_memuat.dart';
+import '../../widgets/data_akun_daftar.dart';
+import '../../widgets/data_usaha_daftar.dart';
+import '../../widgets/header_auth.dart';
+import '../../widgets/kartu_gelombang_auth.dart';
+import '../../widgets/lencana_pendaftaran.dart';
+import '../../widgets/pilihan_kapsul.dart';
 import '../../widgets/primary_button.dart';
+import '../../widgets/tombol_ikon_header.dart';
 import '../shared/main_shell.dart';
+import 'pilih_lokasi_screen.dart';
 
-// Layar daftar akun. Semua kolom wajib diisi.
-// Pilihan peran menentukan field tambahan:
-// - Penjual: nama perusahaan + kota gudang + lokasi gudang (GPS)
-// - Pembeli: jenis usaha + lokasi usaha (GPS)
+// Layar daftar akun (tampilan Recovera lama): header biru + kartu putih bergelombang.
+// Semua kolom wajib diisi. Pilihan peran menentukan field tambahan:
+// - Penjual: nama perusahaan + kota gudang + lokasi gudang (dipilih di peta)
+// - Pembeli: jenis usaha + lokasi usaha (dipilih di peta)
 // Lokasi tampil dengan format "Nama Kota (lat, lng)".
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -29,8 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController passwordController = TextEditingController();
   final TextEditingController pinController = TextEditingController();
   final TextEditingController teleponController = TextEditingController();
-  final TextEditingController namaPerusahaanController =
-      TextEditingController();
+  final TextEditingController namaPerusahaanController = TextEditingController();
   final TextEditingController kotaController = TextEditingController();
 
   String peranTerpilih = 'buyer';
@@ -42,7 +46,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String namaKotaUsaha = '';
 
   // Nilai = yang dikirim ke backend, label = yang tampil.
-  final Map<String, String> pilihanJenisUsaha = {
+  static const Map<String, String> pilihanPeran = {
+    'buyer': 'Pembeli (resto, hotel, katering)',
+    'seller': 'Penjual (distributor / gudang)',
+  };
+  static const Map<String, String> pilihanJenisUsaha = {
     'resto': 'Restoran',
     'hotel': 'Hotel',
     'katering': 'Katering',
@@ -68,11 +76,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (latUsaha == null || lngUsaha == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            isPenjual
-                ? 'Lokasi gudang wajib diambil'
-                : 'Lokasi usaha wajib diambil',
-          ),
+          content: Text(isPenjual ? 'Lokasi gudang wajib diambil' : 'Lokasi usaha wajib diambil'),
           backgroundColor: AppTheme.warnaGalat,
         ),
       );
@@ -113,43 +117,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
-  // Tombol "Gunakan lokasi saat ini": dialog loading -> GPS -> deteksi nama kota & koordinat.
-  // Untuk penjual, kolom kota gudang otomatis diisi kota yang terdeteksi.
-  Future<void> _ambilLokasiUsaha() async {
-    tampilkanDialogMemuat(context, pesan: 'Mendeteksi lokasi & kota...');
-    try {
-      final Position posisi = await LocationService.ambilLokasiSaatIni();
-      final String namaKota = await LocationService.ambilNamaKota(
-        posisi.latitude,
-        posisi.longitude,
-      );
-      if (!mounted) return;
-      Navigator.pop(context); // tutup dialog loading
-      setState(() {
-        latUsaha = posisi.latitude;
-        lngUsaha = posisi.longitude;
-        namaKotaUsaha = namaKota;
-        kotaController.text =
-            namaKota; // Mengganti kota sebelumnya secara otomatis
-      });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Lokasi terdeteksi: ${LocationService.formatLokasi(namaKota, posisi.latitude, posisi.longitude)}',
-          ),
-          backgroundColor: AppTheme.warnaUtama,
+  // Tombol lokasi: buka peta (Navigator.push) -> pengguna memilih titik ->
+  // TitikLokasi dikembalikan lewat Navigator.pop -> setState menyimpan koordinat & kota.
+  // Untuk penjual, kolom kota gudang otomatis diisi kota hasil pilihan.
+  Future<void> _pilihLokasiDiPeta() async {
+    final TitikLokasi? hasil = await Navigator.push<TitikLokasi>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => PilihLokasiScreen(
+          judul: isPenjual ? 'Pilih Lokasi Gudang' : 'Pilih Lokasi Usaha',
+          awal: latUsaha == null ? null : TitikLokasi(lat: latUsaha!, lng: lngUsaha!, kota: namaKotaUsaha),
         ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: AppTheme.warnaGalat,
-        ),
-      );
-    }
+      ),
+    );
+    if (hasil == null || !mounted) return;
+    setState(() {
+      latUsaha = hasil.lat;
+      lngUsaha = hasil.lng;
+      namaKotaUsaha = hasil.kota;
+      kotaController.text = hasil.kota;
+    });
   }
 
   String? _wajibDiisi(String? nilai, String namaField) {
@@ -159,165 +146,97 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    const SizedBox jarak = SizedBox(height: AppTheme.jarakAntarKolom);
     return Scaffold(
-      appBar: AppBar(title: const Text('Daftar akun')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppTheme.jarakSedang),
-        // Kartu putih yang sama dengan form Login, tanpa bayangan (tidak menumpuk header).
-        child: Container(
-          padding: const EdgeInsets.all(AppTheme.jarakBesar),
-          decoration: BoxDecoration(
-            color: AppTheme.warnaPermukaan,
-            borderRadius: BorderRadius.circular(AppTheme.radiusBesar),
-            border: Border.all(color: AppTheme.warnaGaris),
+      body: Column(
+        children: [
+          HeaderAuth(
+            tombolKiri: TombolIkonHeader(
+              ikon: Icons.arrow_back_ios_new_rounded,
+              keterangan: 'Kembali ke Login',
+              onTap: () => Navigator.maybePop(context),
+            ),
+            child: const LencanaPendaftaran(),
           ),
-          child: Form(
-            key: _kunciForm,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                const Text(
-                  'Semua kolom wajib diisi, termasuk lokasi usaha dari GPS.',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontNormal,
-                    color: AppTheme.warnaTeksRedup,
-                  ),
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                DropdownButtonFormField<String>(
-                  initialValue: peranTerpilih,
-                  decoration: const InputDecoration(
-                    labelText: 'Daftar sebagai',
-                  ),
-                  items: const [
-                    DropdownMenuItem(
-                      value: 'buyer',
-                      child: Text('Pembeli (resto, hotel, katering)'),
+          Expanded(
+            child: KartuGelombangAuth(
+              child: Form(
+                key: _kunciForm,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Halo!',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSambutan,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.warnaNavy,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                    DropdownMenuItem(
-                      value: 'seller',
-                      child: Text('Penjual (distributor / gudang)'),
+                    const Text(
+                      'Buat akun Recovera untuk melanjutkan. Semua kolom wajib diisi.',
+                      style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup),
+                    ),
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    PilihanKapsul(
+                      label: 'Daftar sebagai',
+                      nilai: peranTerpilih,
+                      pilihan: pilihanPeran,
+                      onChanged: (nilai) => setState(() => peranTerpilih = nilai ?? 'buyer'),
+                    ),
+                    jarak,
+                    DataAkunDaftar(
+                      namaController: namaController,
+                      emailController: emailController,
+                      passwordController: passwordController,
+                      pinController: pinController,
+                      teleponController: teleponController,
+                      wajibDiisi: _wajibDiisi,
+                    ),
+                    jarak,
+                    DataUsahaDaftar(
+                      isPenjual: isPenjual,
+                      namaPerusahaanController: namaPerusahaanController,
+                      kotaController: kotaController,
+                      jenisUsaha: jenisUsahaTerpilih,
+                      pilihanJenisUsaha: pilihanJenisUsaha,
+                      onJenisUsahaBerubah: (nilai) => setState(() => jenisUsahaTerpilih = nilai ?? 'resto'),
+                      teksLokasi: latUsaha == null
+                          ? null
+                          : LocationService.formatLokasi(namaKotaUsaha, latUsaha!, lngUsaha!),
+                      onAmbilLokasi: _pilihLokasiDiPeta,
+                      wajibDiisi: _wajibDiisi,
+                    ),
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    PrimaryButton(teks: 'Buat Akun', sedangMemuat: sedangMemuat, onPressed: _daftar),
+                    const SizedBox(height: AppTheme.jarakKecil),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Text(
+                          'Sudah punya akun?',
+                          style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.maybePop(context),
+                          child: const Text(
+                            'Sign in',
+                            style: TextStyle(
+                              fontSize: AppTheme.fontInput,
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.warnaUtama,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
-                  onChanged: (nilai) =>
-                      setState(() => peranTerpilih = nilai ?? 'buyer'),
                 ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                TextFormField(
-                  controller: namaController,
-                  decoration: const InputDecoration(labelText: 'Nama lengkap'),
-                  validator: (nilai) => _wajibDiisi(nilai, 'Nama'),
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                TextFormField(
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  validator: (nilai) {
-                    if (nilai == null || nilai.trim().isEmpty) {
-                      return 'Email wajib diisi';
-                    }
-                    if (!nilai.contains('@')) return 'Format email tidak valid';
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                TextFormField(
-                  controller: passwordController,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Password (min. 8 karakter)',
-                  ),
-                  validator: (nilai) {
-                    if (nilai == null || nilai.length < 8) {
-                      return 'Password minimal 8 karakter';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                TextFormField(
-                  controller: pinController,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
-                  obscureText: true,
-                  decoration: const InputDecoration(
-                    labelText: 'PIN Transaksi (6 digit angka)',
-                    hintText: 'Misal: 123456',
-                    counterText: '',
-                    prefixIcon: Icon(Icons.pin_outlined),
-                  ),
-                  validator: (nilai) {
-                    if (nilai == null ||
-                        nilai.length != 6 ||
-                        int.tryParse(nilai) == null) {
-                      return 'PIN harus terdiri dari 6 angka';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                TextFormField(
-                  controller: teleponController,
-                  keyboardType: TextInputType.phone,
-                  decoration: const InputDecoration(labelText: 'No. telepon'),
-                  validator: (nilai) => _wajibDiisi(nilai, 'No. telepon'),
-                ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                // Field berbeda sesuai peran (berubah lewat setState saat dropdown diganti).
-                if (isPenjual) ...[
-                  TextFormField(
-                    controller: namaPerusahaanController,
-                    decoration: const InputDecoration(
-                      labelText: 'Nama perusahaan',
-                    ),
-                    validator: (nilai) => _wajibDiisi(nilai, 'Nama perusahaan'),
-                  ),
-                  const SizedBox(height: AppTheme.jarakSedang),
-                  TextFormField(
-                    controller: kotaController,
-                    decoration: const InputDecoration(labelText: 'Kota gudang'),
-                    validator: (nilai) => _wajibDiisi(nilai, 'Kota gudang'),
-                  ),
-                ] else
-                  DropdownButtonFormField<String>(
-                    initialValue: jenisUsahaTerpilih,
-                    decoration: const InputDecoration(labelText: 'Jenis usaha'),
-                    items: pilihanJenisUsaha.entries
-                        .map(
-                          (pilihan) => DropdownMenuItem(
-                            value: pilihan.key,
-                            child: Text(pilihan.value),
-                          ),
-                        )
-                        .toList(),
-                    onChanged: (nilai) =>
-                        setState(() => jenisUsahaTerpilih = nilai ?? 'resto'),
-                  ),
-                const SizedBox(height: AppTheme.jarakSedang),
-                // Lokasi wajib untuk kedua peran: gudang (penjual) / usaha (pembeli).
-                OutlinedButton.icon(
-                  onPressed: _ambilLokasiUsaha,
-                  icon: const Icon(Icons.my_location),
-                  label: Text(
-                    latUsaha == null
-                        ? (isPenjual
-                              ? 'Gunakan lokasi saat ini sebagai gudang'
-                              : 'Gunakan lokasi saat ini sebagai lokasi usaha')
-                        : '${isPenjual ? 'Gudang' : 'Usaha'}: '
-                              '${LocationService.formatLokasi(namaKotaUsaha, latUsaha!, lngUsaha!)}',
-                  ),
-                ),
-                const SizedBox(height: AppTheme.jarakBesar),
-                PrimaryButton(
-                  teks: 'Daftar',
-                  sedangMemuat: sedangMemuat,
-                  onPressed: _daftar,
-                ),
-              ],
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

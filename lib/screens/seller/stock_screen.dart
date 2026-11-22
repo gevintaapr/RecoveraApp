@@ -4,19 +4,19 @@ import '../../models/listing_model.dart';
 import '../../services/api_service.dart';
 import '../../services/sensor_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/chip_filter_status.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/kolom_cari.dart';
-import '../../widgets/listing_card.dart';
+import '../../widgets/kartu_stok_penjual.dart';
 import '../../widgets/pengingat_draft_lokal.dart';
-import '../../widgets/tab_segmen.dart';
 import '../auth/login_screen.dart';
 import 'listing_detail_screen.dart';
 import 'upload_invoice_screen.dart';
 
 // Tab Stok (penjual): semua listing milik penjual (T6).
 // Data: ApiService.ambilInventaris() lewat FutureBuilder.
-// Panel atas: jumlah produk + tombol Upload, kolom cari (saring nama/merek di HP,
-// setState tiap mengetik), dan tab segmen status. Draft di HP tampil lewat
+// Bagian atas: "Stok Saya" + tombol Upload, kolom cari (saring nama/merek di HP,
+// setState tiap mengetik), dan chip status. Draft di HP tampil lewat
 // ValueListenableBuilder (Hive).
 class StockScreen extends StatefulWidget {
   const StockScreen({super.key});
@@ -136,17 +136,16 @@ class _StockScreenState extends State<StockScreen> {
                     : ListView.builder(
                         // Jarak bawah = tinggi bar navigasi kaca (extendBody) + jarak biasa.
                         padding: EdgeInsets.fromLTRB(
-                          AppTheme.jarakTepi,
+                          AppTheme.jarakBesar,
                           AppTheme.jarakKecil,
-                          AppTheme.jarakTepi,
+                          AppTheme.jarakBesar,
                           MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
                         ),
                         itemCount: daftarStok.length,
                         itemBuilder: (context, indeks) {
                           final ListingModel listing = daftarStok[indeks];
-                          return ListingCard(
+                          return KartuStokPenjual(
                             listing: listing,
-                            untukPenjual: true,
                             onTap: () => _bukaHalaman(SellerListingDetailScreen(idListing: listing.id)),
                           );
                         },
@@ -159,43 +158,65 @@ class _StockScreenState extends State<StockScreen> {
     );
   }
 
-  // Panel putih: jumlah + Upload, kolom cari, tab segmen status (dengan jumlah).
+  // Bagian atas (Stok Saya Recovera lama): judul + pil jumlah stok aktif + tombol
+  // Upload, kolom cari, dan chip status (dengan jumlah). Tanpa panel putih.
   Widget _panelAtas(List<ListingModel> semuaStok) {
     final List<String?> daftarKunci = _labelStatus.keys.toList();
     final List<String> daftarLabel = daftarKunci
-        .map((kunci) => '${_labelStatus[kunci]} ${semuaStok.where((l) => _cocokStatus(l, kunci)).length}')
+        .map((kunci) => '${_labelStatus[kunci]} (${semuaStok.where((l) => _cocokStatus(l, kunci)).length})')
         .toList();
+    final int jumlahAktif = semuaStok.where((l) => l.status == 'active').length;
 
-    return Container(
-      padding: const EdgeInsets.fromLTRB(AppTheme.jarakTepi, 0, AppTheme.jarakTepi, AppTheme.jarakSedang),
-      decoration: const BoxDecoration(
-        color: AppTheme.warnaPermukaan,
-        border: Border(bottom: BorderSide(color: AppTheme.warnaGaris)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(AppTheme.jarakBesar, AppTheme.jarakTepi, AppTheme.jarakBesar, AppTheme.jarakSedang),
+          child: Row(
             children: [
-              Expanded(
-                child: Text(
-                  '${semuaStok.length} produk di gudang',
-                  style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+              const Text(
+                'Stok Saya',
+                style: TextStyle(fontSize: AppTheme.fontJudulStok, fontWeight: FontWeight.w800, color: AppTheme.warnaNavy, letterSpacing: -0.5),
+              ),
+              const SizedBox(width: AppTheme.radiusSedang),
+              Flexible(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: AppTheme.radiusSedang, vertical: AppTheme.jarakMini),
+                  decoration: BoxDecoration(color: AppTheme.warnaLatarInfo, borderRadius: BorderRadius.circular(AppTheme.radiusKapsul)),
+                  child: Text(
+                    '$jumlahAktif stok aktif',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontSize: AppTheme.fontInput, fontWeight: FontWeight.w700, color: AppTheme.warnaJarak),
+                  ),
                 ),
               ),
-              FilledButton.icon(
-                style: FilledButton.styleFrom(minimumSize: const Size(0, AppTheme.tinggiInput)),
-                onPressed: () => _bukaHalaman(const UploadInvoiceScreen()),
-                icon: const Icon(Icons.add, size: AppTheme.ikonKecil),
-                label: const Text('Upload'),
+              const Spacer(),
+              // Tombol Upload stok (di versi lama berupa FAB "Upload Stok").
+              Material(
+                color: AppTheme.warnaUtama,
+                borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
+                  onTap: () => _bukaHalaman(const UploadInvoiceScreen()),
+                  child: const SizedBox(
+                    width: AppTheme.ukuranTombolIkon,
+                    height: AppTheme.ukuranTombolIkon,
+                    child: Tooltip(
+                      message: 'Upload Stok',
+                      child: Icon(Icons.add_a_photo_outlined, color: AppTheme.warnaPermukaan, size: AppTheme.ikonSedang),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),
-          const SizedBox(height: AppTheme.jarakKecil),
-          KolomCari(
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakBesar),
+          child: KolomCari(
             controller: _pencarianController,
-            petunjuk: 'Cari nama atau merek',
-            warnaLatar: AppTheme.warnaLatar,
+            petunjuk: 'Cari stok...',
             onChanged: (_) => setState(() {}),
             onCari: () => setState(() {}),
             onHapus: () {
@@ -203,14 +224,15 @@ class _StockScreenState extends State<StockScreen> {
               setState(() {});
             },
           ),
-          const SizedBox(height: AppTheme.jarakKecil),
-          TabSegmen(
-            daftarLabel: daftarLabel,
-            indeksAktif: daftarKunci.indexOf(_filterStatus),
-            onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppTheme.jarakSedang),
+        ChipFilterStatus(
+          daftarLabel: daftarLabel,
+          indeksAktif: daftarKunci.indexOf(_filterStatus),
+          onPilih: (indeks) => setState(() => _filterStatus = daftarKunci[indeks]),
+        ),
+        const SizedBox(height: AppTheme.jarakKecil),
+      ],
     );
   }
 }

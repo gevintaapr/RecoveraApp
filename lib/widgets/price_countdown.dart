@@ -119,7 +119,11 @@ class _PriceCountdownState extends State<PriceCountdown> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakSedang, vertical: AppTheme.jarakSedang),
       decoration: BoxDecoration(
-        gradient: AppTheme.gradienHeader,
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppTheme.warnaPanelLelangAwal, AppTheme.warnaUtama],
+        ),
         borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
       ),
       child: Row(
@@ -129,15 +133,16 @@ class _PriceCountdownState extends State<PriceCountdown> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Harga turun berikutnya dalam',
-                  style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaPermukaan),
+                  'Turun harga berikutnya dalam:',
+                  style: TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w500, color: AppTheme.warnaPermukaan),
                 ),
+                const SizedBox(height: AppTheme.jarakTipis),
                 Text(
                   habis ? 'Memperbarui...' : _teksSisa,
                   style: const TextStyle(
-                    fontSize: AppTheme.fontJudul,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
+                    fontSize: AppTheme.fontAngkaHitung,
+                    fontWeight: FontWeight.w500, // tidak tebal, seperti versi lama
+                    letterSpacing: 0.5,
                     color: AppTheme.warnaPermukaan,
                     fontFeatures: [FontFeature.tabularFigures()],
                   ),
@@ -150,7 +155,7 @@ class _PriceCountdownState extends State<PriceCountdown> {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 const Text(
-                  'Harga minimum',
+                  'Harga minimum:',
                   style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaPermukaan),
                 ),
                 Text(

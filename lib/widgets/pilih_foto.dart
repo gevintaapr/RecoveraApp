@@ -53,32 +53,49 @@ class PilihFoto extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(AppTheme.radius),
-          child: SizedBox(
-            height: AppTheme.gambarDetail,
-            child: gambar == null
-                ? ColoredBox(
-                    color: AppTheme.warnaGaris,
-                    child: Center(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.add_a_photo_outlined,
-                              size: AppTheme.ikonLogo, color: AppTheme.warnaTeksRedup),
-                          const SizedBox(height: AppTheme.jarakKecil),
-                          Text(teksKosong, style: AppTheme.gayaTeksRedup),
-                        ],
-                      ),
-                    ),
-                  )
-                : Image.memory(gambar!, fit: BoxFit.cover),
+        // Kotak foto gaya Upload Stok Recovera lama: kosong = biru muda bergaris
+        // (ketuk untuk buka galeri), sudah ada foto = garis hijau.
+        Material(
+          color: gambar == null ? AppTheme.warnaLatarUnggah : AppTheme.warnaPermukaan,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusKartuStok),
+            side: BorderSide(color: gambar == null ? AppTheme.warnaGarisUnggah : AppTheme.warnaSukses, width: 1.5),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: InkWell(
+            onTap: gambar == null ? () => _ambilFoto(context, ImageSource.gallery) : null,
+            child: SizedBox(
+              height: gambar == null ? AppTheme.tinggiKotakUnggah : AppTheme.tinggiPratinjauStok,
+              child: gambar == null
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: AppTheme.kotakIkonUnggah,
+                          height: AppTheme.kotakIkonUnggah,
+                          decoration: const BoxDecoration(color: AppTheme.warnaLatarInfo, shape: BoxShape.circle),
+                          child: const Icon(Icons.photo_library_outlined, size: AppTheme.ikonNav, color: AppTheme.warnaJarak),
+                        ),
+                        const SizedBox(height: AppTheme.radiusSedang),
+                        Text(
+                          teksKosong,
+                          style: const TextStyle(fontSize: AppTheme.fontSedang, fontWeight: FontWeight.w700, color: AppTheme.warnaNavy),
+                        ),
+                        const SizedBox(height: AppTheme.jarakMini),
+                        const Text(
+                          'Ketuk untuk pilih dari galeri, atau pakai tombol di bawah',
+                          style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksSedang),
+                        ),
+                      ],
+                    )
+                  : Image.memory(gambar!, fit: BoxFit.contain),
+            ),
           ),
         ),
         if (pesanGalat != null)
           Padding(
             padding: const EdgeInsets.only(top: AppTheme.jarakKecil),
-            child: Text(pesanGalat!, style: const TextStyle(color: AppTheme.warnaGalat)),
+            child: Text(pesanGalat!, style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaGalatTeks)),
           ),
         const SizedBox(height: AppTheme.jarakKecil),
         Row(

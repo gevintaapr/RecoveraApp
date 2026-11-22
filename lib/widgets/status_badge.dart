@@ -10,22 +10,23 @@ class StatusBadge extends StatelessWidget {
 
   const StatusBadge({super.key, required this.status, required this.label});
 
-  // [latar, teks]; semua pasangan lolos kontras 4.5:1.
+  // [latar, teks] mengikuti pil status Recovera lama; semua lolos kontras 4.5:1.
   List<Color> get _pasanganWarna {
     switch (status) {
-      case 'active':
-      case 'completed':
-        return const [AppTheme.warnaLatarSukses, AppTheme.warnaSukses];
       case 'paid':
       case 'draft':
       case 'review':
-        return const [AppTheme.warnaLatarPeringatan, AppTheme.warnaTeksPeringatan];
+        return const [AppTheme.warnaLatarKedaluwarsa, AppTheme.warnaSisaSedang]; // amber
       case 'in_progress':
-        return const [AppTheme.warnaLatarInfo, AppTheme.warnaTeksInfo];
+      case 'picked_up':
+        return const [AppTheme.warnaLatarInfo, AppTheme.warnaJarak]; // biru
+      case 'completed':
+      case 'active':
+        return const [AppTheme.warnaLatarStok, AppTheme.warnaSisaAman]; // hijau
       case 'expired':
-        return const [AppTheme.warnaLatarBahaya, AppTheme.warnaTeksPeringatan];
+        return const [AppTheme.warnaLatarMendesak, AppTheme.warnaTeksMendesak]; // merah
       default:
-        return const [AppTheme.warnaLatarNetral, AppTheme.warnaTeksSedang];
+        return const [AppTheme.warnaLatarNetral, AppTheme.warnaTeksRedup];
     }
   }
 
@@ -33,7 +34,7 @@ class StatusBadge extends StatelessWidget {
   Widget build(BuildContext context) {
     final List<Color> warna = _pasanganWarna;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakKecil, vertical: AppTheme.jarakMini / 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakKecil, vertical: AppTheme.jarakMini),
       decoration: BoxDecoration(
         color: warna[0],
         borderRadius: BorderRadius.circular(AppTheme.radiusChip),
@@ -42,7 +43,7 @@ class StatusBadge extends StatelessWidget {
         label,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: TextStyle(color: warna[1], fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w800),
+        style: TextStyle(color: warna[1], fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w700),
       ),
     );
   }

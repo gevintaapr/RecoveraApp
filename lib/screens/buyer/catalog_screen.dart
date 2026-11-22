@@ -294,8 +294,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
         ),
         children: [
           JudulBagian(
-            judul: _filter.urutan == 'nearest' ? 'Lelang terdekat' : 'Daftar lelang',
-            teksKanan: '${daftarListing.length} produk',
+            ikon: Icons.radar_rounded,
+            judul: _filter.urutan == 'nearest' ? 'Rekomendasi Terdekat' : 'Daftar Produk',
+            teksKanan: '${daftarListing.length} Produk',
           ),
           if (daftarListing.isEmpty)
             const Padding(

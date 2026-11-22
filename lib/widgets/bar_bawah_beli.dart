@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../models/listing_model.dart';
 import '../theme/app_theme.dart';
-import 'bar_bawah_kaca.dart';
-import 'primary_button.dart';
 
-// Bar bawah kaca di halaman detail listing (T1):
-// baris 1 = pengatur jumlah (1..stok), baris 2 = perkiraan total + tombol Beli.
-// Total hanya perkiraan; harga final dikunci server saat dibeli.
+// Bar bawah Detail produk (_buildStickyBottomBar Recovera lama):
+// baris 1 = "Jumlah Pembelian" + pengatur jumlah (1..stok),
+// baris 2 = Total Pembayaran (perkiraan) + tombol "Beli Sekarang".
+// Harga final tetap dikunci server saat dibeli.
 class BarBawahBeli extends StatelessWidget {
   final ListingModel listing;
   final int jumlah;
@@ -23,106 +22,116 @@ class BarBawahBeli extends StatelessWidget {
   });
 
   bool get _stokTersedia => listing.stok > 0;
-  double get _totalPerkiraan => listing.hargaSekarang * jumlah;
 
   @override
   Widget build(BuildContext context) {
-    return BarBawahKaca(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      'Jumlah',
-                      style: TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700),
-                    ),
-                    Text(
-                      _stokTersedia ? 'Stok ${listing.stok} ${listing.satuan}' : 'Stok habis',
-                      style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
-                    ),
-                  ],
-                ),
-              ),
-              if (_stokTersedia)
-                _PengaturJumlah(
-                  jumlah: jumlah,
-                  bisaKurang: jumlah > 1,
-                  bisaTambah: jumlah < listing.stok,
-                  onUbah: onJumlahDiubah,
-                ),
-            ],
-          ),
-          const SizedBox(height: AppTheme.jarakKecil),
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Perkiraan total ($jumlah ${listing.satuan})',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
-                    ),
-                    FittedBox(
-                      fit: BoxFit.scaleDown,
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        ListingModel.formatRupiah(_totalPerkiraan),
-                        style: AppTheme.gayaHarga.copyWith(fontSize: AppTheme.fontBesar),
+    return Container(
+      padding: const EdgeInsets.fromLTRB(AppTheme.jarakTepi, AppTheme.jarakKecil, AppTheme.jarakTepi, AppTheme.radiusSedang),
+      decoration: const BoxDecoration(
+        color: AppTheme.warnaPermukaan,
+        boxShadow: [BoxShadow(color: AppTheme.warnaBayanganBar, blurRadius: 12, offset: Offset(0, -3))],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Jumlah Pembelian',
+                        style: TextStyle(fontSize: AppTheme.fontInput, fontWeight: FontWeight.w700, color: AppTheme.warnaJudulKartu),
                       ),
-                    ),
-                  ],
+                      Text(
+                        _stokTersedia ? '(Min: 1 ${listing.satuan} | Stok: ${listing.stok})' : 'Stok habis',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: AppTheme.fontKecil, color: AppTheme.warnaTeksRedup),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppTheme.jarakSedang),
-              Expanded(
-                child: PrimaryButton(
-                  teks: _stokTersedia ? 'Beli sekarang' : 'Stok habis',
-                  ikon: Icons.shopping_bag_outlined,
+                if (_stokTersedia)
+                  _PengaturJumlah(
+                    jumlah: jumlah,
+                    bisaKurang: jumlah > 1,
+                    bisaTambah: jumlah < listing.stok,
+                    onUbah: onJumlahDiubah,
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppTheme.jarakKecil),
+            const Divider(color: AppTheme.warnaLatarNetral),
+            const SizedBox(height: AppTheme.jarakKecil),
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Total Pembayaran ($jumlah ${listing.satuan}):',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                      ),
+                      FittedBox(
+                        fit: BoxFit.scaleDown,
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          ListingModel.formatRupiah(listing.hargaSekarang * jumlah),
+                          style: const TextStyle(
+                            fontSize: AppTheme.fontJudulTransaksi,
+                            fontWeight: FontWeight.w700,
+                            color: AppTheme.warnaUtama,
+                            letterSpacing: -0.3,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: AppTheme.jarakSedang),
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size(0, AppTheme.ukuranTombolIkon),
+                    padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakBesar, vertical: AppTheme.radiusSedang),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusSedang)),
+                    elevation: 1,
+                    textStyle: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700),
+                  ),
+                  icon: const Icon(Icons.shopping_bag_outlined, size: AppTheme.ikonKecil),
+                  label: Text(_stokTersedia ? 'Beli Sekarang' : 'Stok Habis'),
                   onPressed: _stokTersedia ? onBeliDitekan : null,
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-// Kapsul [-] angka [+]. Tombol bulat terlihat 32, area ketuk 44.
+// Pengatur jumlah abu-abu [-] angka [+] (stepper lama). Area ketuk tiap tombol 44.
 class _PengaturJumlah extends StatelessWidget {
   final int jumlah;
   final bool bisaKurang;
   final bool bisaTambah;
   final ValueChanged<int> onUbah;
 
-  const _PengaturJumlah({
-    required this.jumlah,
-    required this.bisaKurang,
-    required this.bisaTambah,
-    required this.onUbah,
-  });
+  const _PengaturJumlah({required this.jumlah, required this.bisaKurang, required this.bisaTambah, required this.onUbah});
 
-  Widget _tombol({required IconData ikon, required String keterangan, required VoidCallback? onTap}) {
+  Widget _tombol({required IconData ikon, required String keterangan, required bool aktif, required Color warnaAktif, required VoidCallback onTap}) {
     return IconButton(
       tooltip: keterangan,
-      onPressed: onTap,
-      padding: EdgeInsets.zero,
+      onPressed: aktif ? onTap : null,
       constraints: const BoxConstraints(minWidth: AppTheme.ukuranTombolIkon, minHeight: AppTheme.ukuranTombolIkon),
-      icon: Container(
-        width: AppTheme.ukuranTombolKecil,
-        height: AppTheme.ukuranTombolKecil,
-        decoration: const BoxDecoration(color: AppTheme.warnaPermukaan, shape: BoxShape.circle),
-        child: Icon(ikon, size: AppTheme.ikonKecil),
-      ),
+      icon: Icon(ikon, size: AppTheme.ikonKecil, color: aktif ? warnaAktif : AppTheme.warnaTeksRedup),
     );
   }
 
@@ -131,21 +140,21 @@ class _PengaturJumlah extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: AppTheme.warnaLatarNetral,
-        borderRadius: BorderRadius.circular(AppTheme.radiusKapsul),
+        borderRadius: BorderRadius.circular(AppTheme.radiusChip),
+        border: Border.all(color: AppTheme.warnaGaris),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          _tombol(ikon: Icons.remove, keterangan: 'Kurangi', onTap: bisaKurang ? () => onUbah(jumlah - 1) : null),
-          ConstrainedBox(
-            constraints: const BoxConstraints(minWidth: AppTheme.ukuranTombolKecil),
-            child: Text(
-              '$jumlah',
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: AppTheme.fontSubjudul, fontWeight: FontWeight.w800),
-            ),
+          _tombol(ikon: Icons.remove_rounded, keterangan: 'Kurangi', aktif: bisaKurang, warnaAktif: AppTheme.warnaJudulKartu, onTap: () => onUbah(jumlah - 1)),
+          Container(
+            constraints: const BoxConstraints(minWidth: AppTheme.ukuranTombolIkon),
+            height: AppTheme.tombolPanah,
+            alignment: Alignment.center,
+            color: AppTheme.warnaPermukaan,
+            child: Text('$jumlah', style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w700, color: AppTheme.warnaJudulKartu)),
           ),
-          _tombol(ikon: Icons.add, keterangan: 'Tambah', onTap: bisaTambah ? () => onUbah(jumlah + 1) : null),
+          _tombol(ikon: Icons.add_rounded, keterangan: 'Tambah', aktif: bisaTambah, warnaAktif: AppTheme.warnaUtama, onTap: () => onUbah(jumlah + 1)),
         ],
       ),
     );

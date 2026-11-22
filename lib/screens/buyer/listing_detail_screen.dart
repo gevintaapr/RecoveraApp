@@ -138,23 +138,31 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         final ListingModel? listing = snapshot.data;
 
         return Scaffold(
+          backgroundColor: AppTheme.warnaLatarDetail,
+          // Sub-header putih seperti Detail Recovera lama; ikon navy agar back terlihat.
+          // Back selalu tampil, juga saat dibuka dari notifikasi.
           appBar: AppBar(
-            // AppBar biru tema Recovera; back selalu tampil, juga saat dibuka dari notifikasi.
+            backgroundColor: AppTheme.warnaPermukaan,
+            foregroundColor: AppTheme.warnaJudulKartu,
+            centerTitle: false,
+            titleSpacing: 0,
             leading: const TombolKembali(),
             title: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (listing != null)
-                  Text(
-                    [
-                      if (listing.nomorBatch != null)
-                        'Batch ${listing.nomorBatch}',
-                      listing.kategori,
-                    ].join(' · ').toUpperCase(),
-                    style: AppTheme.gayaLabelKapital.copyWith(
-                      color: AppTheme.warnaPermukaan,
-                    ),
+                Text(
+                  listing == null ? 'WHOLESALE' : 'LOT #${listing.id} • WHOLESALE',
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontLabel,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.warnaTeksRedup,
+                    letterSpacing: 0.5,
                   ),
-                const Text('Detail produk'),
+                ),
+                const Text(
+                  'Detail Produk & Batch',
+                  style: TextStyle(fontSize: AppTheme.fontJudulBagian, fontWeight: FontWeight.w700, color: AppTheme.warnaJudulKartu),
+                ),
               ],
             ),
             actions: [
