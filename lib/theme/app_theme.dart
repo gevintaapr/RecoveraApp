@@ -29,6 +29,7 @@ class AppTheme {
   static const double ikonLogo = 72;
   static const double gambarKartu = 88; // gambar kecil di kartu listing
   static const double gambarDetail = 220; // gambar besar di halaman detail
+  static const double rasioKotakRingkasan = 1.6; // lebar : tinggi kotak angka di Dasbor
 
   // ===== GAYA TEKS HARGA =====
   static const TextStyle gayaHarga = TextStyle(

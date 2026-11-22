@@ -40,8 +40,10 @@ class FavoritController extends GetxController {
     return true;
   }
 
+  // Daftar reaktif dihapus DULU, baru Hive. Urutan ini wajib untuk Dismissible
+  // (geser hapus): item harus langsung hilang dari daftar pada frame yang sama.
   Future<void> hapus(int idListing) async {
-    await LocalDbService.hapusFavorit(idListing);
     daftarFavorit.removeWhere((favorit) => favorit.idListing == idListing);
+    await LocalDbService.hapusFavorit(idListing);
   }
 }

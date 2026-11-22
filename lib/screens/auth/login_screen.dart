@@ -63,7 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
       setState(() => sedangMemuat = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
       );
     }
   }

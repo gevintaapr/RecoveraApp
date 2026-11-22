@@ -1,29 +1,29 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart'
-    show TargetPlatform, defaultTargetPlatform, kIsWeb;
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
 
+import '../models/invoice_result_model.dart';
 import '../models/listing_model.dart';
+import '../models/notification_model.dart';
 import '../models/order_model.dart';
+import '../models/price_advice_model.dart';
 import '../models/user_model.dart';
 import 'session_service.dart';
 
 // ApiService = SATU class berisi static method (pola Modul V).
 // Semua pemanggilan backend lewat sini; screen tidak memanggil http langsung.
 class ApiService {
-  // Alamat laptop yang menjalankan backend, di jaringan Wi-Fi yang sama dengan HP.
-  // Cek di laptop dengan `ipconfig` (IPv4 Address). Ganti bila pindah Wi-Fi.
-  // Untuk emulator Android, ganti menjadi '10.0.2.2'.
-  static const String _ipLaptop = '192.168.18.135';
-
   // Satu-satunya tempat alamat server.
-  // - Chrome (web) / Windows desktop -> backend ada di komputer yang sama -> localhost.
-  // - HP Android -> lewat IP laptop.
-  static final String baseUrl =
-      (kIsWeb || defaultTargetPlatform == TargetPlatform.windows)
-          ? 'http://localhost:8000'
-          : 'http://$_ipLaptop:8000';
+  // 127.0.0.1 = "komputer ini sendiri", dipakai di semua perangkat:
+  // - Chrome / Windows: backend memang ada di laptop yang sama.
+  // - HP (kabel USB) atau emulator: jalankan dulu di laptop
+  //     adb reverse tcp:8000 tcp:8000
+  //   agar 127.0.0.1:8000 di HP diteruskan lewat USB ke port 8000 laptop.
+  //   Tidak perlu Wi-Fi yang sama dan tidak perlu tahu IP laptop.
+  // Saat demo dengan ngrok, cukup ganti baris ini dengan alamat ngrok.
+  static const String baseUrl = 'http://127.0.0.1:8000';
 
   // ===== HELPER (dipakai semua method di bawah) =====
 
@@ -260,8 +260,194 @@ class ApiService {
     return OrderModel.fromJson(data);
   }
 
-  // ===== PENJUAL =====     (langkah: upload penjual, stok)
-  // ===== AI =====          (langkah: upload penjual)
+  // ===== PENJUAL =====
+
+  // GET /listings/seller/inventory
+  // Semua listing milik penjual (draft, aktif, terjual, kedaluwarsa), terbaru di atas.
+  static Future<List<ListingModel>> ambilInventaris() async {
+    final http.Response response = await _kirim(
+      http.get(Uri.parse('$baseUrl/listings/seller/inventory'), headers: await _buatHeader()),
+    );
+
+    final List<dynamic> data = _olahResponse(response) as List<dynamic>;
+    return data
+        .map((item) => ListingModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  // PATCH /listings/{id}
+  // Mengubah stok dan/atau harga minimum listing yang sudah terbit.
+  // Kolom yang null tidak dikirim (tidak diubah).
+  static Future<ListingModel> ubahListing(
+    int idListing, {
+    int? jumlah,
+    double? hargaMinimum,
+  }) async {
+    final Map<String, dynamic> isiPermintaan = {};
+    if (jumlah != null) isiPermintaan['qty'] = jumlah;
+    if (hargaMinimum != null) isiPermintaan['min_price'] = hargaMinimum;
+
+    final http.Response response = await _kirim(
+      http.patch(
+        Uri.parse('$baseUrl/listings/$idListing'),
+        headers: await _buatHeader(),
+        body: jsonEncode(isiPermintaan),
+      ),
+    );
+
+    final Map<String, dynamic> data = _olahResponse(response) as Map<String, dynamic>;
+    return ListingModel.fromJson(data);
+  }
+
+  // POST /listings/seller/inventory/drafts
+  // Membuat produk + listing berstatus "draft" di server.
+  // Server langsung mengisi harga awal = harga saran AI.
+  static Future<ListingModel> buatDraft({
+    required String namaProduk,
+    String? merek,
+    required String kategori,
+    required String jenisPenyimpanan,
+    required String satuan,
+    required String urlGambar,
+    required String nomorBatch,
+    required int jumlah,
+    required double hargaNormal,
+    required double hargaMinimum,
+    required DateTime tanggalKedaluwarsa,
+  }) async {
+    final String tanggal = tanggalKedaluwarsa.toIso8601String().substring(0, 10); // YYYY-MM-DD
+    final Map<String, dynamic> isiPermintaan = {
+      // SKU wajib di backend; dibuat otomatis agar penjual tidak perlu mengisi.
+      'sku': 'SKU-${DateTime.now().millisecondsSinceEpoch}',
+      'name': namaProduk,
+      'category': kategori,
+      'storage_type': jenisPenyimpanan,
+      'default_unit': satuan,
+      'image_url': urlGambar,
+      'batch_number': nomorBatch,
+      'qty': jumlah,
+      'normal_price': hargaNormal,
+      'min_price': hargaMinimum,
+      'expiry_date': tanggal,
+    };
+    if (merek != null && merek.isNotEmpty) isiPermintaan['brand'] = merek;
+
+    final http.Response response = await _kirim(
+      http.post(
+        Uri.parse('$baseUrl/listings/seller/inventory/drafts'),
+        headers: await _buatHeader(),
+        body: jsonEncode(isiPermintaan),
+      ),
+    );
+
+    // Data: {listing, validation, price_recommendation}; yang dipakai listing-nya.
+    final Map<String, dynamic> data = _olahResponse(response) as Map<String, dynamic>;
+    return ListingModel.fromJson(data['listing'] as Map<String, dynamic>);
+  }
+
+  // POST /listings/seller/inventory/{id}/recommendation
+  static Future<PriceAdviceModel> ambilRekomendasiHarga(int idListing) async {
+    final http.Response response = await _kirim(
+      http.post(
+        Uri.parse('$baseUrl/listings/seller/inventory/$idListing/recommendation'),
+        headers: await _buatHeader(),
+      ),
+    );
+
+    final Map<String, dynamic> data = _olahResponse(response) as Map<String, dynamic>;
+    return PriceAdviceModel.fromJson(data);
+  }
+
+  // POST /listings/seller/inventory/{id}/publish
+  // Draft menjadi "active" dan tampil di katalog pembeli.
+  // setujuiPeringatan = true bila harga awal di luar rentang saran
+  // dan penjual sudah menyetujui peringatannya.
+  static Future<ListingModel> terbitkanListing(
+    int idListing, {
+    bool setujuiPeringatan = false,
+  }) async {
+    final http.Response response = await _kirim(
+      http.post(
+        Uri.parse('$baseUrl/listings/seller/inventory/$idListing/publish'),
+        headers: await _buatHeader(),
+        body: jsonEncode({'acknowledge_price_warning': setujuiPeringatan}),
+      ),
+    );
+
+    final Map<String, dynamic> data = _olahResponse(response) as Map<String, dynamic>;
+    return ListingModel.fromJson(data);
+  }
+
+  // POST /products/upload-image (multipart, field "file")
+  // Satu-satunya endpoint /products yang dipakai: foto produk diunggah
+  // ke penyimpanan server, hasilnya image_url untuk membuat draft.
+  static Future<String> unggahGambarProduk({
+    required Uint8List isiFile,
+    required String namaFile,
+  }) async {
+    final Map<String, dynamic> data = await _kirimMultipart(
+      alamat: '$baseUrl/products/upload-image',
+      isiFile: isiFile,
+      namaFile: namaFile,
+    );
+    return data['image_url'] as String;
+  }
+
+  // ===== AI =====
+
+  // POST /ai/invoice (multipart, field "file")
+  // Foto faktur dibaca server (OCR), hasilnya daftar barang untuk mengisi form.
+  static Future<InvoiceResultModel> unggahFaktur({
+    required Uint8List isiFile,
+    required String namaFile,
+  }) async {
+    final Map<String, dynamic> data = await _kirimMultipart(
+      alamat: '$baseUrl/ai/invoice',
+      isiFile: isiFile,
+      namaFile: namaFile,
+    );
+    return InvoiceResultModel.fromJson(data);
+  }
+
+  // CATATAN: Menggunakan http.MultipartRequest (elemen di luar modul)
+  // Fungsi: mengirim file gambar (faktur / foto produk) ke backend.
+  // Alasan: http.post di Modul V hanya mengirim teks/JSON, sedangkan
+  //         endpoint upload meminta form-data berisi file.
+  // Cara kerja: request dibuat, token dipasang di header, file ditempel
+  //         sebagai field "file", lalu dikirim; jawabannya dibaca seperti
+  //         response biasa lewat _olahResponse.
+  static Future<Map<String, dynamic>> _kirimMultipart({
+    required String alamat,
+    required Uint8List isiFile,
+    required String namaFile,
+  }) async {
+    final http.MultipartRequest permintaan =
+        http.MultipartRequest('POST', Uri.parse(alamat));
+    final String? token = await SessionService.ambilToken();
+    if (token != null) permintaan.headers['Authorization'] = 'Bearer $token';
+
+    // Backend memeriksa jenis file harus "image/...", jadi jenisnya ditulis
+    // jelas (MediaType dari package http_parser, bawaan package http).
+    final bool filePng = namaFile.toLowerCase().endsWith('.png');
+    permintaan.files.add(http.MultipartFile.fromBytes(
+      'file',
+      isiFile,
+      filename: namaFile,
+      contentType: MediaType('image', filePng ? 'png' : 'jpeg'),
+    ));
+
+    // OCR bisa lama, jadi batas waktunya lebih panjang dari request biasa.
+    http.Response response;
+    try {
+      final http.StreamedResponse hasilStream =
+          await permintaan.send().timeout(const Duration(seconds: 60));
+      response = await http.Response.fromStream(hasilStream);
+    } catch (e) {
+      throw Exception('Tidak dapat terhubung ke server');
+    }
+    return _olahResponse(response) as Map<String, dynamic>;
+  }
+
   // ===== ORDER =====
 
   // GET /orders
@@ -287,6 +473,41 @@ class ApiService {
     return OrderModel.fromJson(data);
   }
 
-  // (ubahStatusPesanan ditambahkan di langkah "pesanan masuk" penjual)
-  // ===== NOTIFIKASI =====  (langkah: notifikasi)
+  // PATCH /orders/{id}/status  (khusus penjual)
+  // Urutan yang diizinkan server: paid -> in_progress -> completed.
+  static Future<void> ubahStatusPesanan(int idPesanan, String statusBaru) async {
+    final http.Response response = await _kirim(
+      http.patch(
+        Uri.parse('$baseUrl/orders/$idPesanan/status'),
+        headers: await _buatHeader(),
+        body: jsonEncode({'status': statusBaru}),
+      ),
+    );
+    _olahResponse(response);
+  }
+
+  // ===== NOTIFIKASI =====
+
+  // GET /notifications -> inbox milik user yang login, terbaru di atas.
+  static Future<List<NotificationModel>> ambilNotifikasi() async {
+    final http.Response response = await _kirim(
+      http.get(Uri.parse('$baseUrl/notifications'), headers: await _buatHeader()),
+    );
+
+    final List<dynamic> data = _olahResponse(response) as List<dynamic>;
+    return data
+        .map((item) => NotificationModel.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  // PATCH /notifications/{id}/read
+  static Future<void> tandaiNotifikasiDibaca(int idNotifikasi) async {
+    final http.Response response = await _kirim(
+      http.patch(
+        Uri.parse('$baseUrl/notifications/$idNotifikasi/read'),
+        headers: await _buatHeader(),
+      ),
+    );
+    _olahResponse(response);
+  }
 }

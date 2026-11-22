@@ -1,26 +1,63 @@
+import 'package:hive/hive.dart';
+
+// File ini dibuat otomatis oleh build_runner (Modul VI):
+//   dart run build_runner build --delete-conflicting-outputs
+part 'listing_model.g.dart';
+
 // Model listing lelang dari GET /listings dan GET /listings/{id}.
 // Harga lelang Belanda DIHITUNG SERVER (current_price, next_drop_at);
 // aplikasi hanya menampilkan, tidak menghitung ulang.
+//
+// @HiveType: listing juga disimpan di Hive box 'listings_cache'
+// sebagai katalog terakhir, untuk ditampilkan saat offline (Modul VI).
+@HiveType(typeId: 1)
 class ListingModel {
+  @HiveField(0)
   final int id;
+  @HiveField(1)
   final String namaProduk;
+  @HiveField(2)
   final String? merek;
+  @HiveField(3)
   final String kategori;
+  @HiveField(4)
   final String satuan; // mis. kg, pcs, karton
+  @HiveField(5)
   final String? urlGambar;
+  @HiveField(6)
   final int stok;
+  @HiveField(7)
   final double hargaNormal;
+  @HiveField(8)
   final double hargaMinimum;
+  @HiveField(9)
   final double hargaSekarang;
+  @HiveField(10)
   final double? persenDiskon;
+  @HiveField(11)
   final DateTime? waktuTurunBerikutnya;
+  @HiveField(12)
   final DateTime lelangBerakhir;
+  @HiveField(13)
   final DateTime tanggalKedaluwarsa;
+  @HiveField(14)
   final int? sisaHari;
+  @HiveField(15)
   final String? namaPenjual;
+  @HiveField(16)
   final String? kotaGudang;
+  @HiveField(17)
   final double? jarakKm; // terisi bila katalog diminta dengan lat/lng
+  @HiveField(19)
+  final double? latGudang; // koordinat gudang penjual, untuk hitung jarak di detail
+  @HiveField(20)
+  final double? lngGudang;
+  @HiveField(18)
   final String status;
+  @HiveField(21)
+  final String? nomorBatch;
+  @HiveField(22)
+  final String? jenisPenyimpanan;
 
   ListingModel({
     required this.id,
@@ -41,7 +78,11 @@ class ListingModel {
     this.namaPenjual,
     this.kotaGudang,
     this.jarakKm,
+    this.latGudang,
+    this.lngGudang,
     required this.status,
+    this.nomorBatch,
+    this.jenisPenyimpanan,
   });
 
   factory ListingModel.fromJson(Map<String, dynamic> json) {
@@ -71,7 +112,11 @@ class ListingModel {
       namaPenjual: json['seller_company'] as String?,
       kotaGudang: json['warehouse_city'] as String?,
       jarakKm: (json['distance_km'] as num?)?.toDouble(),
+      latGudang: (json['warehouse_lat'] as num?)?.toDouble(),
+      lngGudang: (json['warehouse_lng'] as num?)?.toDouble(),
       status: json['status'] as String? ?? 'active',
+      nomorBatch: json['batch_number'] as String?,
+      jenisPenyimpanan: produk['storage_type'] as String?,
     );
   }
 
@@ -81,6 +126,26 @@ class ListingModel {
     if (hargaNormal <= 0) return 0;
     return ((1 - hargaSekarang / hargaNormal) * 100).round();
   }
+
+  // Teks status listing untuk penjual (halaman Stok).
+  String get labelStatus {
+    switch (status) {
+      case 'draft':
+        return 'Draft';
+      case 'review':
+        return 'Siap terbit';
+      case 'active':
+        return 'Aktif';
+      case 'sold':
+        return 'Habis';
+      case 'expired':
+        return 'Kedaluwarsa';
+      default:
+        return status;
+    }
+  }
+
+  bool get masihDraft => status == 'draft' || status == 'review';
 
   // ===== Pembantu format tampilan (tanpa package tambahan) =====
 

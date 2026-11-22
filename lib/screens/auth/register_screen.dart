@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
 
+import 'package:geolocator/geolocator.dart';
+
 import '../../services/api_service.dart';
+import '../../services/location_service.dart';
+import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/dialog_memuat.dart';
 import '../../widgets/primary_button.dart';
 import '../shared/main_shell.dart';
 
 // Layar daftar akun. Pilihan peran menentukan field tambahan:
-// - Penjual: nama perusahaan + kota
+// - Penjual: nama perusahaan + kota + lokasi gudang (tombol "Gunakan lokasi saat ini")
 // - Pembeli: jenis usaha
-// Lokasi gudang lewat GPS ditambahkan di langkah "lokasi".
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
 
@@ -21,6 +25,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final TextEditingController namaController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  final TextEditingController pinController = TextEditingController();
   final TextEditingController teleponController = TextEditingController();
   final TextEditingController namaPerusahaanController = TextEditingController();
   final TextEditingController kotaController = TextEditingController();
@@ -28,6 +33,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String peranTerpilih = 'buyer';
   String jenisUsahaTerpilih = 'resto';
   bool sedangMemuat = false;
+  // Koordinat gudang penjual dari GPS (null = belum diambil -> backend pakai nilai bawaan).
+  double? latGudang;
+  double? lngGudang;
 
   // Nilai = yang dikirim ke backend, label = yang tampil.
   final Map<String, String> pilihanJenisUsaha = {
@@ -42,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     namaController.dispose();
     emailController.dispose();
     passwordController.dispose();
+    pinController.dispose();
     teleponController.dispose();
     namaPerusahaanController.dispose();
     kotaController.dispose();
@@ -70,7 +79,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
         namaPerusahaan: isPenjual ? namaPerusahaanController.text.trim() : null,
         kota: isPenjual ? _isiAtauNull(kotaController) : null,
         jenisUsaha: isPenjual ? null : jenisUsahaTerpilih,
+        latitude: isPenjual ? latGudang : null,
+        longitude: isPenjual ? lngGudang : null,
       );
+      // Simpan PIN transaksi ke SharedPreferences (Modul VI)
+      await SessionService.simpanPin(pinController.text.trim());
       if (!mounted) return;
       Navigator.pushAndRemoveUntil(
         context,
@@ -81,7 +94,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
       if (!mounted) return;
       setState(() => sedangMemuat = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
+      );
+    }
+  }
+
+  // Tombol "Gunakan lokasi saat ini": dialog loading -> GPS -> simpan koordinat.
+  Future<void> _ambilLokasiGudang() async {
+    tampilkanDialogMemuat(context, pesan: 'Mengambil lokasi...');
+    try {
+      final Position posisi = await LocationService.ambilLokasiSaatIni();
+      if (!mounted) return;
+      Navigator.pop(context); // tutup dialog loading
+      setState(() {
+        latGudang = posisi.latitude;
+        lngGudang = posisi.longitude;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
       );
     }
   }
@@ -140,6 +179,25 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: AppTheme.jarakSedang),
               TextFormField(
+                controller: pinController,
+                keyboardType: TextInputType.number,
+                maxLength: 6,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'PIN Transaksi (6 digit angka)',
+                  hintText: 'Misal: 123456',
+                  counterText: '',
+                  prefixIcon: Icon(Icons.pin_outlined),
+                ),
+                validator: (nilai) {
+                  if (nilai == null || nilai.length != 6 || int.tryParse(nilai) == null) {
+                    return 'PIN harus terdiri dari 6 angka';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: AppTheme.jarakSedang),
+              TextFormField(
                 controller: teleponController,
                 keyboardType: TextInputType.phone,
                 decoration: const InputDecoration(labelText: 'No. telepon (opsional)'),
@@ -156,6 +214,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 TextFormField(
                   controller: kotaController,
                   decoration: const InputDecoration(labelText: 'Kota gudang (opsional)'),
+                ),
+                const SizedBox(height: AppTheme.jarakSedang),
+                OutlinedButton.icon(
+                  onPressed: _ambilLokasiGudang,
+                  icon: const Icon(Icons.my_location),
+                  label: Text(latGudang == null
+                      ? 'Gunakan lokasi saat ini sebagai gudang'
+                      : 'Lokasi gudang: ${latGudang!.toStringAsFixed(5)}, '
+                          '${lngGudang!.toStringAsFixed(5)}'),
                 ),
               ] else
                 DropdownButtonFormField<String>(

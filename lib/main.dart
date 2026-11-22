@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import 'bindings/favorit_binding.dart';
+import 'controllers/notifikasi_controller.dart';
 import 'routes/app_pages.dart';
 import 'screens/auth/splash_screen.dart';
 import 'services/local_db_service.dart';
+import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 
 Future<void> main() async {
@@ -12,7 +14,12 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Hive: init, daftarkan adapter, buka box (Modul VI).
   await LocalDbService.init();
-  // Inisialisasi notifikasi ditambahkan di langkah notifikasi.
+  // Notifikasi lokal: zona waktu, izin, dan channel (Modul VII).
+  await NotificationService().init();
+  // GetX (Modul VIII): Get.put langsung membuat controller dan menyimpannya,
+  // sehingga semua layar mengambil objek yang sama lewat Get.find.
+  // (Bandingkan dengan FavoritBinding yang memakai Get.lazyPut.)
+  Get.put<NotifikasiController>(NotifikasiController(), permanent: true);
   runApp(const RecoveraApp());
 }
 

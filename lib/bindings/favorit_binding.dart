@@ -3,13 +3,18 @@ import 'package:get/get.dart';
 import '../controllers/favorit_controller.dart';
 
 // Binding (Modul VIII): tempat mendaftarkan controller ke GetX.
-// Dipasang sebagai initialBinding di GetMaterialApp, jadi berjalan saat aplikasi mulai.
-// Memakai Get.put (bukan lazyPut) dengan permanent: true karena controller ini
-// sudah dibutuhkan sejak katalog tampil dan harus tetap hidup di semua halaman.
-// Widget lain cukup mengambilnya dengan Get.find<FavoritController>().
+// Dipasang di dua tempat:
+// 1. initialBinding di GetMaterialApp -> sudah terdaftar sejak aplikasi mulai,
+//    karena katalog dan badge AppBar langsung membutuhkannya.
+// 2. binding di GetPage Favorit -> menyiapkan controller sebelum halaman dibuka.
+//    Bila sudah terdaftar, lazyPut kedua ini diabaikan GetX (instance tetap sama).
+//
+// Get.lazyPut: controller baru dibuat saat pertama kali Get.find dipanggil.
+// fenix: true -> bila controller sempat dihapus GetX (mis. halaman ditutup),
+// ia dibuat ulang otomatis saat dicari lagi; isinya dimuat ulang dari Hive di onInit.
 class FavoritBinding extends Bindings {
   @override
   void dependencies() {
-    Get.put<FavoritController>(FavoritController(), permanent: true);
+    Get.lazyPut<FavoritController>(() => FavoritController(), fenix: true);
   }
 }

@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../controllers/favorit_controller.dart';
 import '../models/favorit_model.dart';
 import '../theme/app_theme.dart';
+import 'notifikasi_glass.dart';
 
 // Ikon hati untuk menyimpan / menghapus favorit.
 // Obx membuat ikon ikut berubah di semua tempat sekaligus
@@ -28,12 +29,10 @@ class TombolFavorit extends StatelessWidget {
         onPressed: () async {
           final bool tersimpan = await favoritController.toggleFavorit(favorit);
           if (!context.mounted) return;
-          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(tersimpan ? 'Disimpan ke Favorit' : 'Dihapus dari Favorit'),
-              duration: const Duration(seconds: 1),
-            ),
+          tampilkanNotifikasiGlass(
+            pesan: tersimpan ? 'Disimpan ke Favorit' : 'Dihapus dari Favorit',
+            ikon: tersimpan ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            warnaIkon: tersimpan ? AppTheme.warnaGalat : AppTheme.warnaTeksRedup,
           );
         },
       );

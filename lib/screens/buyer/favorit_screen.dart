@@ -6,13 +6,14 @@ import '../../models/favorit_model.dart';
 import '../../models/listing_model.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/notifikasi_glass.dart';
 import '../../widgets/tombol_favorit.dart';
 import 'listing_detail_screen.dart';
 
 // Halaman Favorit (pembeli). Dibuka dengan Get.toNamed(AppRoutes.favorit).
-// Data: FavoritController.daftarFavorit (isi Hive), ditampilkan dengan Obx + GridView.
-// Tidak ada setState: saat hati diketuk, controller mengubah daftar,
-// lalu Obx menggambar ulang grid secara otomatis.
+// Data: FavoritController.daftarFavorit (isi Hive), ditampilkan dengan Obx + ListView.builder.
+// Hapus favorit: geser item ke kiri (Dismissible) atau ketuk ikon hati.
+// Tidak ada setState: controller mengubah daftar, lalu Obx menggambar ulang otomatis.
 class FavoritScreen extends StatelessWidget {
   const FavoritScreen({super.key});
 
@@ -30,18 +31,56 @@ class FavoritScreen extends StatelessWidget {
             pesan: 'Belum ada favorit.\nKetuk ikon hati di katalog untuk menyimpan produk.',
           );
         }
-        return GridView.builder(
+        return ListView.builder(
           padding: const EdgeInsets.all(AppTheme.jarakSedang),
           itemCount: daftarFavorit.length,
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            mainAxisSpacing: AppTheme.jarakKecil,
-            crossAxisSpacing: AppTheme.jarakKecil,
-            childAspectRatio: 0.68,
-          ),
-          itemBuilder: (context, indeks) => _KartuFavorit(favorit: daftarFavorit[indeks]),
+          itemBuilder: (context, indeks) {
+            final FavoritModel favorit = daftarFavorit[indeks];
+            // Dismissible: item bisa digeser ke kiri untuk dihapus.
+            // key wajib unik agar Flutter tahu item mana yang digeser.
+            return Dismissible(
+              key: ValueKey<int>(favorit.idListing),
+              direction: DismissDirection.endToStart,
+              background: const _LatarHapus(),
+              onDismissed: (_) => _hapusFavorit(context, favoritController, favorit),
+              child: _KartuFavorit(favorit: favorit),
+            );
+          },
         );
       }),
+    );
+  }
+
+  Future<void> _hapusFavorit(
+    BuildContext context,
+    FavoritController favoritController,
+    FavoritModel favorit,
+  ) async {
+    await favoritController.hapus(favorit.idListing);
+    if (!context.mounted) return;
+    tampilkanNotifikasiGlass(
+      pesan: '${favorit.namaProduk} dihapus dari Favorit',
+      ikon: Icons.delete_outline_rounded,
+      warnaIkon: AppTheme.warnaTeksRedup,
+    );
+  }
+}
+
+// Latar merah berikon tempat sampah yang terlihat saat item digeser.
+class _LatarHapus extends StatelessWidget {
+  const _LatarHapus();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      alignment: Alignment.centerRight,
+      margin: const EdgeInsets.symmetric(vertical: AppTheme.jarakKecil / 2),
+      padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakBesar),
+      decoration: BoxDecoration(
+        color: AppTheme.warnaGalat,
+        borderRadius: BorderRadius.circular(AppTheme.radius),
+      ),
+      child: const Icon(Icons.delete_outline, color: AppTheme.warnaPermukaan),
     );
   }
 }
@@ -56,6 +95,7 @@ class _KartuFavorit extends StatelessWidget {
     return Card(
       color: AppTheme.warnaPermukaan,
       clipBehavior: Clip.antiAlias,
+      margin: const EdgeInsets.symmetric(vertical: AppTheme.jarakKecil / 2),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
       child: InkWell(
         // Detail memuat harga terbaru dari server (Navigator.push + idListing, Modul IV).
@@ -65,66 +105,64 @@ class _KartuFavorit extends StatelessWidget {
             builder: (context) => ListingDetailScreen(idListing: favorit.idListing),
           ),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  _gambar(),
-                  Positioned(
-                    top: 0,
-                    right: 0,
-                    child: ColoredBox(
-                      color: AppTheme.warnaPermukaan,
-                      child: TombolFavorit(favorit: favorit),
-                    ),
-                  ),
-                ],
+        child: Padding(
+          padding: const EdgeInsets.all(AppTheme.jarakKecil),
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(AppTheme.radius),
+                child: _gambar(),
               ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(AppTheme.jarakKecil),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    favorit.namaProduk,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    ListingModel.formatRupiah(favorit.hargaSaatDisimpan),
-                    style: AppTheme.gayaHarga,
-                  ),
-                  Text(
-                    favorit.lelangSudahBerakhir ? 'Lelang berakhir' : 'Harga saat disimpan',
-                    style: TextStyle(
-                      fontSize: AppTheme.fontKecil,
-                      color: favorit.lelangSudahBerakhir
-                          ? AppTheme.warnaGalat
-                          : AppTheme.warnaTeksRedup,
+              const SizedBox(width: AppTheme.jarakSedang),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      favorit.namaProduk,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: AppTheme.jarakKecil / 2),
+                    Text(
+                      ListingModel.formatRupiah(favorit.hargaSaatDisimpan),
+                      style: AppTheme.gayaHarga,
+                    ),
+                    Text(
+                      favorit.lelangSudahBerakhir ? 'Lelang berakhir' : 'Harga saat disimpan',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontKecil,
+                        color: favorit.lelangSudahBerakhir
+                            ? AppTheme.warnaGalat
+                            : AppTheme.warnaTeksRedup,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+              TombolFavorit(favorit: favorit),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _gambar() {
-    const Widget gambarCadangan = ColoredBox(
-      color: AppTheme.warnaGaris,
-      child: Icon(Icons.image_outlined, color: AppTheme.warnaTeksRedup),
+    const Widget gambarCadangan = SizedBox(
+      width: AppTheme.gambarKartu,
+      height: AppTheme.gambarKartu,
+      child: ColoredBox(
+        color: AppTheme.warnaGaris,
+        child: Icon(Icons.image_outlined, color: AppTheme.warnaTeksRedup),
+      ),
     );
     if (favorit.urlGambar == null || favorit.urlGambar!.isEmpty) return gambarCadangan;
     return Image.network(
       favorit.urlGambar!,
+      width: AppTheme.gambarKartu,
+      height: AppTheme.gambarKartu,
       fit: BoxFit.cover,
       errorBuilder: (context, error, stackTrace) => gambarCadangan,
     );

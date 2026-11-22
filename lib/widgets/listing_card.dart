@@ -3,15 +3,27 @@ import 'package:flutter/material.dart';
 import '../models/favorit_model.dart';
 import '../models/listing_model.dart';
 import '../theme/app_theme.dart';
+import 'price_countdown.dart';
+import 'status_badge.dart';
 import 'tombol_favorit.dart';
 
 // Kartu satu listing di katalog: gambar, nama, penjual, harga sekarang,
 // harga normal dicoret, diskon, sisa hari kedaluwarsa, dan jarak (bila ada).
+// Dipakai juga di halaman Stok penjual (untukPenjual = true):
+// tombol favorit diganti label status + sisa stok.
 class ListingCard extends StatelessWidget {
   final ListingModel listing;
   final VoidCallback onTap;
+  final bool untukPenjual;
+  final VoidCallback? onHargaTurun; // dipanggil saat hitung mundur harga habis
 
-  const ListingCard({super.key, required this.listing, required this.onTap});
+  const ListingCard({
+    super.key,
+    required this.listing,
+    required this.onTap,
+    this.untukPenjual = false,
+    this.onHargaTurun,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -30,8 +42,17 @@ class ListingCard extends StatelessWidget {
             children: [
               _GambarProduk(urlGambar: listing.urlGambar),
               const SizedBox(width: AppTheme.jarakSedang),
-              Expanded(child: _InfoListing(listing: listing)),
-              TombolFavorit(favorit: FavoritModel.dariListing(listing)),
+              Expanded(
+                child: _InfoListing(
+                  listing: listing,
+                  untukPenjual: untukPenjual,
+                  onHargaTurun: onHargaTurun,
+                ),
+              ),
+              if (untukPenjual)
+                StatusBadge(status: listing.status, label: listing.labelStatus)
+              else
+                TombolFavorit(favorit: FavoritModel.dariListing(listing)),
             ],
           ),
         ),
@@ -42,13 +63,16 @@ class ListingCard extends StatelessWidget {
 
 class _InfoListing extends StatelessWidget {
   final ListingModel listing;
+  final bool untukPenjual;
+  final VoidCallback? onHargaTurun;
 
-  const _InfoListing({required this.listing});
+  const _InfoListing({required this.listing, required this.untukPenjual, this.onHargaTurun});
 
   @override
   Widget build(BuildContext context) {
     final List<String> keterangan = [
-      if (listing.namaPenjual != null) listing.namaPenjual!,
+      if (untukPenjual) 'Stok ${listing.stok} ${listing.satuan}',
+      if (!untukPenjual && listing.namaPenjual != null) listing.namaPenjual!,
       if (listing.jarakKm != null) ListingModel.formatJarak(listing.jarakKm!),
     ];
 
@@ -94,6 +118,15 @@ class _InfoListing extends StatelessWidget {
               ),
           ],
         ),
+        // Hitung mundur hidup ke penurunan harga berikutnya (hanya listing aktif).
+        if (listing.status == 'active' && listing.waktuTurunBerikutnya != null) ...[
+          const SizedBox(height: AppTheme.jarakKecil / 2),
+          PriceCountdown(
+            waktuTurun: listing.waktuTurunBerikutnya!,
+            onHargaTurun: onHargaTurun,
+            ringkas: true,
+          ),
+        ],
       ],
     );
   }

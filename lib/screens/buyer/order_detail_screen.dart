@@ -4,16 +4,24 @@ import '../../models/listing_model.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/baris_info.dart';
+import '../../widgets/dialog_memuat.dart';
 import '../../widgets/empty_state.dart';
+import '../../widgets/primary_button.dart';
 import '../../widgets/status_badge.dart';
+import '../auth/login_screen.dart';
 
 // Detail satu pesanan. idPesanan dikirim lewat konstruktor
 // (dari daftar pesanan, atau langsung setelah Beli Sekarang berhasil).
 // Data: ApiService.ambilDetailPesanan(idPesanan) lewat FutureBuilder.
+// Penjual (isPenjual = true) mendapat tombol ubah status:
+//   paid -> in_progress ("siap diambil") -> completed ("sudah diambil").
+// Tombol -> dialog loading -> ApiService.ubahStatusPesanan -> _muatUlang (setState).
 class OrderDetailScreen extends StatefulWidget {
   final int idPesanan;
+  final bool isPenjual;
 
-  const OrderDetailScreen({super.key, required this.idPesanan});
+  const OrderDetailScreen({super.key, required this.idPesanan, this.isPenjual = false});
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -71,20 +79,63 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   child: StatusBadge(status: pesanan.status, label: pesanan.labelStatus),
                 ),
                 const Divider(height: AppTheme.jarakBesar * 2),
-                _BarisInfo(label: 'Jumlah', nilai: '${pesanan.jumlah}'),
-                _BarisInfo(label: 'Harga satuan', nilai: ListingModel.formatRupiah(pesanan.hargaSatuan)),
-                _BarisInfo(label: 'Total', nilai: ListingModel.formatRupiah(pesanan.totalHarga)),
-                _BarisInfo(label: 'Tanggal', nilai: '${ListingModel.formatTanggal(pesanan.dibuatPada)}, ${ListingModel.formatJam(pesanan.dibuatPada)}'),
-                _BarisInfo(label: 'Penjual', nilai: pesanan.namaPenjual ?? '-'),
-                _BarisInfo(label: 'Ambil di', nilai: pesanan.alamatGudang ?? '-'),
+                BarisInfo(label: 'Jumlah', nilai: '${pesanan.jumlah}'),
+                BarisInfo(label: 'Harga satuan', nilai: ListingModel.formatRupiah(pesanan.hargaSatuan)),
+                BarisInfo(label: 'Total', nilai: ListingModel.formatRupiah(pesanan.totalHarga)),
+                BarisInfo(label: 'Tanggal', nilai: '${ListingModel.formatTanggal(pesanan.dibuatPada)}, ${ListingModel.formatJam(pesanan.dibuatPada)}'),
+                if (widget.isPenjual)
+                  BarisInfo(label: 'Pembeli', nilai: pesanan.namaPembeli ?? '-')
+                else
+                  BarisInfo(label: 'Penjual', nilai: pesanan.namaPenjual ?? '-'),
+                BarisInfo(label: 'Ambil di', nilai: pesanan.alamatGudang ?? '-'),
                 const SizedBox(height: AppTheme.jarakBesar),
-                Text(_keteranganStatus(pesanan.status), style: AppTheme.gayaTeksRedup),
+                if (widget.isPenjual && _statusBerikutnya(pesanan.status) != null)
+                  PrimaryButton(
+                    teks: pesanan.status == 'paid' ? 'Tandai siap diambil' : 'Tandai sudah diambil',
+                    onPressed: () => _ubahStatus(pesanan.status),
+                  )
+                else
+                  Text(_keteranganStatus(pesanan.status), style: AppTheme.gayaTeksRedup),
               ],
             ),
           );
         },
       ),
     );
+  }
+
+  // Status tujuan sesuai urutan server; null = sudah selesai.
+  String? _statusBerikutnya(String status) {
+    if (status == 'paid') return 'in_progress';
+    if (status == 'in_progress') return 'completed';
+    return null;
+  }
+
+  Future<void> _ubahStatus(String statusSekarang) async {
+    tampilkanDialogMemuat(context, pesan: 'Memperbarui status...');
+    try {
+      await ApiService.ubahStatusPesanan(widget.idPesanan, _statusBerikutnya(statusSekarang)!);
+      if (!mounted) return;
+      Navigator.pop(context); // tutup dialog loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Status pesanan diperbarui')),
+      );
+      await _muatUlang();
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // tutup dialog loading
+      final String pesan = e.toString().replaceFirst('Exception: ', '');
+      if (pesan == 'Sesi berakhir') {
+        await kembaliKeLogin(context);
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(pesan),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
+      );
+    }
   }
 
   String _keteranganStatus(String status) {
@@ -96,26 +147,5 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       default:
         return 'Pesanan sudah selesai.';
     }
-  }
-}
-
-class _BarisInfo extends StatelessWidget {
-  final String label;
-  final String nilai;
-
-  const _BarisInfo({required this.label, required this.nilai});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppTheme.jarakKecil / 2),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(flex: 2, child: Text(label, style: AppTheme.gayaTeksRedup)),
-          Expanded(flex: 3, child: Text(nilai)),
-        ],
-      ),
-    );
   }
 }

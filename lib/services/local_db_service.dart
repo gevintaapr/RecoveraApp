@@ -1,22 +1,48 @@
+import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../models/draft_listing_model.dart';
 import '../models/favorit_model.dart';
+import '../models/listing_model.dart';
 
 // LocalDbService: SATU-SATUNYA tempat yang menyentuh Hive (Modul VI).
 // Screen dan controller memanggil method di sini, tidak membuka box sendiri.
 class LocalDbService {
   static const String _namaBoxFavorit = 'favorit_listing';
+  static const String _namaBoxCacheKatalog = 'listings_cache';
+  static const String _namaBoxDraft = 'draft_listings';
 
   // Dipanggil sekali di main.dart sebelum runApp.
   static Future<void> init() async {
     await Hive.initFlutter();
     // Adapter hasil build_runner (favorit_model.g.dart).
     Hive.registerAdapter(FavoritModelAdapter());
+    Hive.registerAdapter(ListingModelAdapter());
+    Hive.registerAdapter(DraftListingModelAdapter());
     await Hive.openBox<FavoritModel>(_namaBoxFavorit);
+    await Hive.openBox<ListingModel>(_namaBoxCacheKatalog);
+    await Hive.openBox<DraftListingModel>(_namaBoxDraft);
   }
 
   static Box<FavoritModel> get _boxFavorit =>
       Hive.box<FavoritModel>(_namaBoxFavorit);
+
+  static Box<ListingModel> get _boxCacheKatalog =>
+      Hive.box<ListingModel>(_namaBoxCacheKatalog);
+
+  // ===== CACHE KATALOG =====
+
+  // Menyimpan katalog terakhir dari server. Isi lama dihapus dulu,
+  // jadi cache selalu sama dengan hasil terakhir yang berhasil dimuat.
+  static Future<void> simpanCacheKatalog(List<ListingModel> daftarListing) async {
+    await _boxCacheKatalog.clear();
+    await _boxCacheKatalog.addAll(daftarListing);
+  }
+
+  // Dipakai saat server tidak bisa dihubungi (tampil dengan label "Data offline").
+  static List<ListingModel> ambilCacheKatalog() {
+    return _boxCacheKatalog.values.toList();
+  }
 
   // ===== FAVORIT =====
 
@@ -36,5 +62,32 @@ class LocalDbService {
     await _boxFavorit.delete(idListing);
   }
 
-  // (cache katalog, draft penjual, dan skor game ditambahkan di langkahnya)
+  // ===== DRAFT PENJUAL =====
+
+  static Box<DraftListingModel> get _boxDraft =>
+      Hive.box<DraftListingModel>(_namaBoxDraft);
+
+  // Dipakai layar dengan ValueListenableBuilder (Modul VI): setiap draft
+  // disimpan / dihapus, daftar draft di layar ikut berubah sendiri.
+  static ValueListenable<Box<DraftListingModel>> pantauDraft() {
+    return _boxDraft.listenable();
+  }
+
+  // Draft terbaru di atas.
+  static List<DraftListingModel> ambilSemuaDraft() {
+    final List<DraftListingModel> daftar = _boxDraft.values.toList();
+    daftar.sort((a, b) => b.waktuDisimpan.compareTo(a.waktuDisimpan));
+    return daftar;
+  }
+
+  // Kunci = idDraft, jadi menyimpan draft yang sama akan menimpa versi lamanya.
+  static Future<void> simpanDraft(DraftListingModel draft) async {
+    await _boxDraft.put(draft.idDraft, draft);
+  }
+
+  static Future<void> hapusDraft(String idDraft) async {
+    await _boxDraft.delete(idDraft);
+  }
+
+  // (skor game ditambahkan di langkahnya)
 }

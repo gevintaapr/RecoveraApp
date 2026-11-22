@@ -6,12 +6,15 @@ plugins {
 
 android {
     namespace = "com.example.recoveraa"
-    compileSdk = flutter.compileSdkVersion
+    // flutter_local_notifications versi 23 mewajibkan compileSdk minimal 37.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // Wajib untuk flutter_local_notifications (notifikasi terjadwal).
+        isCoreLibraryDesugaringEnabled = true
     }
 
     defaultConfig {
@@ -46,4 +49,9 @@ kotlin {
 
 flutter {
     source = "../.."
+}
+
+dependencies {
+    // Pasangan isCoreLibraryDesugaringEnabled di atas (flutter_local_notifications).
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }

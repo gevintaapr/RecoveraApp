@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../../controllers/favorit_controller.dart';
+import '../../controllers/notifikasi_controller.dart';
 import '../../routes/app_routes.dart';
-import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
-import '../auth/login_screen.dart';
-import '../../widgets/dialog_memuat.dart';
 import '../buyer/catalog_screen.dart';
+import '../seller/dashboard_screen.dart';
+import '../seller/stock_screen.dart';
+import 'notification_screen.dart';
 import 'orders_screen.dart';
+import 'profile_screen.dart';
 
-// Kerangka utama setelah login: BottomNavigationBar dengan 4 tab per peran.
-// Isi tab masih sementara; tiap tab diganti layar aslinya di langkah berikutnya.
-// Tombol logout di AppBar juga sementara, nanti pindah ke layar Profil.
+// Kerangka utama setelah login: BottomNavigationBar dengan 3 tab per peran.
+// Tombol Keluar ada di tab Profil. (Mini game sengaja tidak dibuat.)
 class MainShell extends StatefulWidget {
   final String peran; // 'seller' atau 'buyer', dikirim dari login/register/splash
 
@@ -24,54 +25,46 @@ class MainShell extends StatefulWidget {
 
 class _MainShellState extends State<MainShell> {
   int _selectedIndex = 0;
+  final NotifikasiController notifikasiController = Get.find<NotifikasiController>();
+
+  // Pemicu cek notifikasi server (tanpa FCM, tanpa Timer):
+  // sekali saat shell dibuka. Notifikasi baru (mis. "Pesanan Baru Masuk!"
+  // untuk penjual) langsung muncul sebagai pop-up, badge lonceng diperbarui.
+  @override
+  void initState() {
+    super.initState();
+    notifikasiController.cekDiLatar();
+  }
+
+  // Pemicu tambahan: setiap pindah tab di BottomNavigationBar.
+  void _pindahTab(int indeks) {
+    setState(() => _selectedIndex = indeks);
+    notifikasiController.cekDiLatar();
+  }
 
   bool get isPenjual => widget.peran == 'seller';
 
   // Judul tab sesuai peran (panduan 3.2 dan 3.3).
   List<String> get _judulTab => isPenjual
-      ? ['Dasbor', 'Stok', 'Game', 'Profil']
-      : ['Katalog', 'Pesanan', 'Game', 'Profil'];
+      ? ['Dasbor', 'Stok', 'Profil']
+      : ['Katalog', 'Pesanan', 'Profil'];
 
   List<IconData> get _ikonTab => isPenjual
-      ? [Icons.dashboard_outlined, Icons.inventory_2_outlined, Icons.sports_esports_outlined, Icons.person_outline]
-      : [Icons.storefront_outlined, Icons.receipt_long_outlined, Icons.sports_esports_outlined, Icons.person_outline];
+      ? [Icons.dashboard_outlined, Icons.inventory_2_outlined, Icons.person_outline]
+      : [Icons.storefront_outlined, Icons.receipt_long_outlined, Icons.person_outline];
 
   // Array halaman: yang tampil = _pages[_selectedIndex].
-  // _HalamanSementara diganti layar asli di langkah berikutnya.
   List<Widget> get _pages => isPenjual
       ? const [
-          _HalamanSementara(judul: 'Dasbor'),
-          _HalamanSementara(judul: 'Stok'),
-          _HalamanSementara(judul: 'Game'),
-          _HalamanSementara(judul: 'Profil'),
+          DashboardScreen(),
+          StockScreen(),
+          ProfileScreen(),
         ]
       : const [
           CatalogScreen(),
           OrdersScreen(isPenjual: false),
-          _HalamanSementara(judul: 'Game'),
-          _HalamanSementara(judul: 'Profil'),
+          ProfileScreen(),
         ];
-
-  // Konfirmasi -> dialog loading (buffer) -> logout di server -> kembali ke Login.
-  Future<void> _keluar() async {
-    final bool? yakin = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Keluar dari akun?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Batal')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Keluar')),
-        ],
-      ),
-    );
-    if (yakin != true || !mounted) return;
-
-    tampilkanDialogMemuat(context, pesan: 'Sedang keluar...');
-    await ApiService.keluar();
-    if (!mounted) return;
-    // pushAndRemoveUntil di dalamnya ikut menutup dialog loading.
-    await kembaliKeLogin(context);
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -81,11 +74,7 @@ class _MainShellState extends State<MainShell> {
         actions: [
           // Ikon Favorit + badge jumlah, hanya untuk pembeli.
           if (!isPenjual) const _IkonFavorit(),
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Keluar',
-            onPressed: _keluar,
-          ),
+          const _IkonNotifikasi(),
         ],
       ),
       body: _pages[_selectedIndex],
@@ -93,7 +82,7 @@ class _MainShellState extends State<MainShell> {
         currentIndex: _selectedIndex,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: AppTheme.warnaUtama,
-        onTap: (indeks) => setState(() => _selectedIndex = indeks),
+        onTap: _pindahTab,
         items: List.generate(
           _judulTab.length,
           (i) => BottomNavigationBarItem(icon: Icon(_ikonTab[i]), label: _judulTab[i]),
@@ -126,16 +115,27 @@ class _IkonFavorit extends StatelessWidget {
   }
 }
 
-// Isi tab sementara sampai layar aslinya dibuat.
-class _HalamanSementara extends StatelessWidget {
-  final String judul;
-
-  const _HalamanSementara({required this.judul});
+// Ikon lonceng + badge jumlah belum dibaca (kedua peran).
+// Angka dari NotifikasiController (Obx), berkurang otomatis saat notifikasi dibaca.
+// Ketuk -> Navigator.push ke halaman Notifikasi (Modul IV).
+class _IkonNotifikasi extends StatelessWidget {
+  const _IkonNotifikasi();
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Text('Halaman $judul (segera dibuat)', style: AppTheme.gayaTeksRedup),
+    final NotifikasiController notifikasiController = Get.find<NotifikasiController>();
+
+    return IconButton(
+      tooltip: 'Notifikasi',
+      onPressed: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const NotificationScreen()),
+      ),
+      icon: Obx(() => Badge(
+            isLabelVisible: notifikasiController.jumlahBelumDibaca.value > 0,
+            label: Text('${notifikasiController.jumlahBelumDibaca.value}'),
+            child: const Icon(Icons.notifications_none),
+          )),
     );
   }
 }

@@ -1,7 +1,7 @@
 # Recovera — TA Praktikum Pemrograman Aplikasi Mobile (Flutter)
 
 Aplikasi B2B likuidasi pangan near-expiry. Dua peran: **Penjual** dan **Pembeli**.
-Backend FastAPI sudah jadi dan terpisah dari repo ini; Flutter hanya klien.
+Backend FastAPI ada di folder `backend/` di repo ini (disalin dari `../recovera/backend`, lalu dikelola sendiri), memakai database Supabase milik pemilik proyek. Aplikasi Flutter (`lib/`) hanya klien: memanggil backend lewat HTTP, tidak pernah terhubung langsung ke Supabase. Aturan Flutter di bawah ini tidak berlaku untuk kode Python di `backend/`.
 
 Dokumen rujukan (baca hanya saat dibutuhkan, jangan dibaca semua sekaligus):
 - `docs/Panduan Proyek Akhir PAM — Recovera Versi Praktikum.md` (selanjutnya "panduan") — panduan proyek lengkap (fitur, struktur, kode contoh notifikasi)
@@ -44,7 +44,7 @@ lib/
 │   └── sensor_service.dart   # akselerometer
 ├── screens/
 │   ├── auth/    splash, login, register
-│   ├── shared/  main_shell, profile, notification, orders (dipakai kedua peran), game
+│   ├── shared/  main_shell, profile, notification, orders (dipakai kedua peran)
 │   ├── seller/  dashboard, stock, upload_invoice, listing_form, listing_detail
 │   └── buyer/   catalog, listing_detail, order_detail, favorit
 └── widgets/     listing_card, price_countdown, filter_sheet, status_badge, empty_state, primary_button, tombol_favorit
@@ -89,7 +89,6 @@ Format komentar, tepat di atas kodenya:
 | Hive `listings_cache` | katalog terakhir (tampil saat offline, dengan label "Data offline") |
 | Hive `orders_cache` | pesanan terakhir |
 | Hive `draft_listings` | draft upload penjual (diterbitkan manual lewat tombol "Terbitkan") |
-| Hive `game_scores` | skor mini game |
 | Hive `favorit_listing` | listing lelang yang disimpan pembeli (kunci = id listing), dibaca lewat `FavoritController` |
 
 Saat logout: hapus semua key sesi **termasuk `last_notif_id`**, lalu `pushAndRemoveUntil` ke Login.
@@ -116,13 +115,13 @@ Harga lelang Belanda **dihitung server** (`current_price`, `next_drop_at`). Flut
 
 ## Fitur yang sengaja dibuang (jangan ditambahkan kembali)
 
-Biometrik, Saran & Kesan, FCM, sertifikat ESG + SHA-256 / blockchain, kompas magnetometer, peta OSM / pin picker, konversi mata uang dan waktu, refresh token otomatis. Jarak ke gudang cukup teks, misalnya "2,4 km".
+Biometrik, Saran & Kesan, mini game (tab Game), FCM, sertifikat ESG + SHA-256 / blockchain, kompas magnetometer, peta OSM / pin picker, konversi mata uang dan waktu, refresh token otomatis. Jarak ke gudang cukup teks, misalnya "2,4 km".
 
 ## Prioritas pengerjaan
 
 **Tingkat 1 (wajib selesai dan bisa didemokan dulu):** splash/login/register/sesi/shell per peran/logout; katalog, detail, **favorit (Hive + GetX)**, Beli Sekarang, pesanan, cache katalog + draft di Hive; penjual (upload faktur OCR → rekomendasi harga → terbitkan, stok, pesanan masuk); lokasi dan jarak; notifikasi immediate + scheduled + inbox.
 
-**Tingkat 2 (setelah Tingkat 1 stabil, urut):** pop-up notifikasi dari server; shake-to-refresh (sensor tidak ada di Modul I–VIII); mini game "Food Saver Challenge" (versi tombol, skor di Hive); filter lanjutan (bottom sheet) + sort; ketuk pop-up membuka halaman; polish tampilan.
+**Tingkat 2 (setelah Tingkat 1 stabil, urut):** pop-up notifikasi dari server; shake-to-refresh (sensor tidak ada di Modul I–VIII); filter lanjutan (bottom sheet) + sort; ketuk pop-up membuka halaman; polish tampilan.
 
 **Urutan build:** `api_service` + `session_service` → auth → katalog + detail → favorit (Hive + GetX) → beli + pesanan → lokasi → notifikasi immediate + scheduled → upload penjual → stok + pesanan masuk → (Tingkat 2).
 
@@ -147,6 +146,20 @@ Hanya untuk dibaca. Boleh dipakai sebagai contoh model, daftar endpoint, isi pem
 flutter pub get
 flutter analyze
 flutter run          # uji di HP fisik, terutama notifikasi dan sensor
+```
+
+Backend (dari folder `backend/`, virtualenv `backend/.venv`, rahasia di `backend/.env` yang tidak di-commit):
+
+```
+cd backend
+.venv\Scripts\activate
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+HP lewat kabel USB (tidak perlu Wi-Fi yang sama): `baseUrl` = `http://127.0.0.1:8000`, lalu setiap kali HP baru dicolok jalankan
+
+```
+D:\Android\Sdk\platform-tools\adb.exe reverse tcp:8000 tcp:8000
 ```
 
 Untuk demo lelang, backend dijalankan dengan `TIME_SCALE` agar harga turun cepat. `baseUrl` diisi alamat ngrok atau server saat demo.

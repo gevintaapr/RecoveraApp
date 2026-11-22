@@ -9,6 +9,7 @@ class SessionService {
   static const String _kunciNamaPengguna = 'user_name';
   static const String _kunciSudahLogin = 'is_logged_in';
   static const String _kunciIdNotifTerakhir = 'last_notif_id';
+  static const String _kunciPin = 'transaction_pin';
 
   // Dipanggil setelah login / register berhasil.
   static Future<void> simpanSesi({
@@ -46,14 +47,32 @@ class SessionService {
   }
 
   // ID notifikasi server terakhir yang sudah dimunculkan sebagai pop-up.
-  static Future<int> ambilIdNotifTerakhir() async {
+  // null = belum pernah dicek sejak login (notifikasi lama tidak di-pop-up).
+  static Future<int?> ambilIdNotifTerakhir() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    return prefs.getInt(_kunciIdNotifTerakhir) ?? 0;
+    return prefs.getInt(_kunciIdNotifTerakhir);
   }
 
   static Future<void> simpanIdNotifTerakhir(int idNotif) async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_kunciIdNotifTerakhir, idNotif);
+  }
+
+  // ===== PIN TRANSAKSI (Pengaman Checkout B2B) =====
+  static Future<void> simpanPin(String pin) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_kunciPin, pin);
+  }
+
+  // Mengambil PIN. Bawaan '123456' bila akun belum mengatur PIN custom.
+  static Future<String> ambilPin() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_kunciPin) ?? '123456';
+  }
+
+  static Future<bool> verifikasiPin(String inputPin) async {
+    final String pinAsli = await ambilPin();
+    return pinAsli == inputPin;
   }
 
   // Dipanggil saat logout atau sesi berakhir (401).

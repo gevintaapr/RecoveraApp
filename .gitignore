@@ -50,3 +50,10 @@ app.*.map.json
 # Rahasia lokal
 .env
 *.env
+
+# Backend FastAPI (folder backend/)
+backend/.venv/
+**/__pycache__/
+*.py[cod]
+.pytest_cache/
+backend/*.db

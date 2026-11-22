@@ -1,17 +1,15 @@
 import 'package:flutter/material.dart';
 
-import '../../models/listing_model.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/empty_state.dart';
-import '../../widgets/status_badge.dart';
+import '../../widgets/kartu_pesanan.dart';
 import '../auth/login_screen.dart';
-import '../buyer/order_detail_screen.dart';
 
 // Tab Pesanan. Dipakai kedua peran:
 // - pembeli: riwayat pembelian
-// - penjual: pesanan masuk (aksi ubah status ditambahkan di langkah penjual)
+// - penjual: pesanan masuk (dibuka dari Dasbor; ubah status di detail pesanan)
 // Data: ApiService.ambilDaftarPesanan() lewat FutureBuilder.
 // setState: saat ditarik ke bawah -> future diganti -> daftar dimuat ulang.
 class OrdersScreen extends StatefulWidget {
@@ -79,50 +77,14 @@ class _OrdersScreenState extends State<OrdersScreen> {
                   padding: const EdgeInsets.all(AppTheme.jarakSedang),
                   itemCount: daftarPesanan.length,
                   itemBuilder: (context, indeks) =>
-                      _KartuPesanan(pesanan: daftarPesanan[indeks], isPenjual: widget.isPenjual),
+                      KartuPesanan(
+                    pesanan: daftarPesanan[indeks],
+                    isPenjual: widget.isPenjual,
+                    onKembali: _muatUlang, // status mungkin berubah di detail
+                  ),
                 ),
         );
       },
-    );
-  }
-}
-
-class _KartuPesanan extends StatelessWidget {
-  final OrderModel pesanan;
-  final bool isPenjual;
-
-  const _KartuPesanan({required this.pesanan, required this.isPenjual});
-
-  @override
-  Widget build(BuildContext context) {
-    // Penjual melihat nama pembeli, pembeli melihat nama penjual.
-    final String? pihakLain = isPenjual ? pesanan.namaPembeli : pesanan.namaPenjual;
-
-    return Card(
-      color: AppTheme.warnaPermukaan,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radius)),
-      child: ListTile(
-        title: Text(pesanan.namaProduk, style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          '${pesanan.jumlah} x ${ListingModel.formatRupiah(pesanan.hargaSatuan)}'
-          '${pihakLain == null ? '' : '\n$pihakLain'}\n'
-          '${ListingModel.formatTanggal(pesanan.dibuatPada)}',
-        ),
-        isThreeLine: true,
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Text(ListingModel.formatRupiah(pesanan.totalHarga), style: AppTheme.gayaHarga),
-            const SizedBox(height: AppTheme.jarakKecil / 2),
-            StatusBadge(status: pesanan.status, label: pesanan.labelStatus),
-          ],
-        ),
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => OrderDetailScreen(idPesanan: pesanan.id)),
-        ),
-      ),
     );
   }
 }
