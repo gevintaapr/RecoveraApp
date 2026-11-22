@@ -1,108 +1,116 @@
 import 'package:flutter/material.dart';
 
 // CATATAN: Menggunakan google_fonts (elemen di luar modul)
-// Fungsi: memakai font "Plus Jakarta Sans" sesuai desain Recovera Ocean Glass.
-// Alasan: Flutter bawaan hanya punya font Roboto; desain meminta font lain.
-// Cara kerja: GoogleFonts.plusJakartaSansTextTheme() membuat TextTheme berfont
-// Plus Jakarta Sans; font diunduh sekali saat pertama tampil lalu disimpan di HP.
+// Fungsi: memakai font "Inter", sama dengan desain Recovera lama.
+// Alasan: Flutter bawaan hanya punya font Roboto; desain Recovera memakai Inter.
+// Cara kerja: GoogleFonts.interTextTheme() membuat TextTheme berfont Inter;
+// font diunduh sekali saat pertama tampil lalu disimpan di HP.
 import 'package:google_fonts/google_fonts.dart';
 
 // SATU-SATUNYA tempat warna, ukuran font, radius, dan jarak.
-// Desain: "Recovera Ocean Glass" (biru laut + efek kaca).
+// Nilai disamakan dengan desain Recovera lama (../recovera/lib/core/theme).
 // Ganti nilai di sini -> seluruh aplikasi ikut berubah.
 class AppTheme {
-  // Warna dasar. Biru laut dipilih karena tema "Ocean Glass": tenang, dingin, segar.
-  static const Color warnaUtama = Color(0xFF0077B6);
-  static const Color warnaUtamaGelap = Color(0xFF023E8A); // ujung gelap gradien
-  static const Color warnaNavy = Color(0xFF03045E); // pangkal gradien header
-  // Cyan hanya untuk aksen tanpa teks di atasnya: putih di atas cyan cuma 2.46:1.
-  static const Color warnaSekunder = Color(0xFF00B4D8);
-  static const Color warnaLatar = Color(0xFFF5F8FB);
+  // Warna dasar Recovera (AppColors lama).
+  static const Color warnaUtama = Color(0xFF0077B6); // primary
+  static const Color warnaUtamaGelap = Color(0xFF005F92); // primaryDark
+  static const Color warnaUtamaTerang = Color(0xFF006CA7); // primaryLight: bawah header auth
+  static const Color warnaLabelInput = Color(0xFF475569); // slate-600: label di atas input
+  static const Color warnaSekunder = Color(0xFF00B4D8); // secondary
+  static const Color warnaAksenMuda = Color(0xFF90E0EF); // accent (gelombang belakang)
+  static const Color warnaNavy = Color(0xFF03045E); // darkNavy: judul & teks utama
+  static const Color warnaLatar = Color(0xFFF8FAFC); // canvasBg
   static const Color warnaPermukaan = Colors.white;
-  static const Color warnaTeks = Color(0xFF0B1B3A);
-  static const Color warnaTeksRedup = Color(0xFF5B6B80); // 5.1:1 di warnaLatar (WCAG AA)
+  static const Color warnaTeks = warnaNavy;
+  static const Color warnaTeksRedup = Color(0xFF64748B); // slateText
   static const Color warnaTeksSedang = Color(0xFF475569);
-  static const Color warnaGaris = Color(0xFFE6EDF3);
-  static const Color warnaGarisTegas = Color(0xFFDCE6EF);
+  static const Color warnaGaris = Color(0xFFE2E8F0); // border
+  static const Color warnaGarisTegas = Color(0xFFE2E8F0);
 
-  // Warna status. Selalu dipasangkan dengan teks/ikon, tidak pernah warna saja.
-  static const Color warnaAksen = Color(0xFFC2410C); // diskon, peringatan
-  static const Color warnaSukses = Color(0xFF047857);
-  static const Color warnaLatarSukses = Color(0xFFE6F6EE);
-  static const Color warnaLatarInfo = Color(0xFFE0F2FE); // juga latar item nav aktif
-  static const Color warnaTeksInfo = Color(0xFF075985); // teks di atas warnaLatarInfo
-  static const Color warnaBahaya = Color(0xFFE11D48); // hati favorit
-  static const Color warnaGalat = warnaBahaya; // pesan error, tombol keluar
-  static const Color warnaSisaHari = Color(0xFFB45309); // amber "Sisa X hari"
-  static const Color warnaLatarPeringatan = Color(0xFFFFEDD5); // badge menunggu/draft
-  static const Color warnaTeksPeringatan = Color(0xFF9A3412); // 6.4:1 di atas latarnya
-  static const Color warnaLatarBahaya = Color(0xFFFFF1F2); // latar ikon hati terisi
-  static const Color warnaLatarNetral = Color(0xFFF1F5F9); // tombol kecil, tab segmen
-  static const Color warnaGelombang = Color(0x7300B4D8); // cyan 45%, lapis gelombang header
+  // Status (AppColors lama + pelengkap untuk badge).
+  static const Color warnaSukses = Color(0xFF10B981); // success
+  static const Color warnaLatarSukses = Color(0xFFECFDF5); // successBg
+  static const Color warnaGarisSukses = Color(0xFF6EE7B7); // successBorder
+  static const Color warnaGalat = Color(0xFFEF4444); // error
+  static const Color warnaBahaya = warnaGalat; // hati favorit
+  static const Color warnaAksen = Color(0xFFF97316); // oranye diskon / peringatan
+  static const Color warnaSisaHari = Color(0xFFD97706); // amber "Sisa X hari"
+  static const Color warnaLatarInfo = Color(0xFFE0F2FE);
+  static const Color warnaTeksInfo = Color(0xFF075985);
+  static const Color warnaLatarPeringatan = Color(0xFFFFEDD5);
+  static const Color warnaTeksPeringatan = Color(0xFF9A3412);
+  static const Color warnaLatarBahaya = Color(0xFFFEF2F2);
+  static const Color warnaLatarNetral = Color(0xFFF1F5F9);
+  static const Color warnaGelombang = Color(0x7390E0EF); // accent 45%: gelombang belakang header
 
-  // Kaca dipakai paling banyak di 2 elemen per layar (tombol ikon header, bar bawah).
+  // Sisa dari desain kaca; dipertahankan agar widget lama tetap jalan.
   static const Color warnaKaca = Color(0x29FFFFFF); // putih 16%
+  static const Color warnaCahayaLogo = Color(0x66FFFFFF); // putih 40%: cahaya di belakang logo
   static const Color warnaGarisKaca = Color(0x59FFFFFF); // putih 35%
-  static const Color warnaBarKaca = Color(0xD9FFFFFF); // putih 85%: bottom nav, bar bawah
-  static const Color warnaBayangan = Color(0x1403045E); // navy 8%, hanya untuk bar yang melayang
+  static const Color warnaBarKaca = Colors.white;
+  static const Color warnaBayangan = Color(0x260077B6); // bayangan biru tombol utama
   static const double blurKaca = 12;
 
-  // Gradien 135 derajat. Titik paling terang #0077B6, jadi teks putih lolos 4.87:1 di
-  // seluruh area. Hanya dipakai di header bergelombang dan tombol utama.
-  static const LinearGradient gradienUtama = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [warnaUtama, warnaUtamaGelap],
-  );
-  // Lapisan gelap di bawah foto detail: transparan ke navy 90%. Teks putih hanya
-  // duduk di bagian pekat (mulai 45%), jadi tetap terbaca di atas foto terang.
+  // Recovera lama memakai biru solid; "gradien" dibuat satu warna agar widget lama
+  // yang memakainya tampil solid.
+  static const LinearGradient gradienUtama = LinearGradient(colors: [warnaUtama, warnaUtama]);
+  static const LinearGradient gradienHeader = LinearGradient(colors: [warnaUtama, warnaUtama]);
   static const LinearGradient gradienScrim = LinearGradient(
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
     stops: [0, 0.45],
     colors: [Color(0x0003045E), Color(0xE603045E)],
   );
-  static const LinearGradient gradienHeader = LinearGradient(
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-    colors: [warnaNavy, warnaUtamaGelap, warnaUtama],
-  );
 
-  static const double fontMini = 9.5; // pita diskon, badge
-  static const double fontLabel = 10.5; // chip, label kecil
-  static const double fontKecil = 11.5; // keterangan
-  static const double fontNormal = 12.5; // isi
-  static const double fontSedang = 13; // nama produk, tombol
-  static const double fontSubjudul = 15;
-  static const double fontBesar = 18; // harga besar, judul header
-  static const double fontJudul = 24;
+  // Skala font Recovera lama (textTheme Inter).
+  static const double fontMini = 9;
+  static const double fontInput = 12; // hint & label input
+  static const double fontLabel = 10; // labelSmall
+  static const double fontKecil = 11; // bodySmall
+  static const double fontNormal = 13; // bodyMedium
+  static const double fontSedang = 14; // titleMedium, tombol
+  static const double fontSubjudul = 16; // judul AppBar
+  static const double fontBesar = 22; // headlineMedium
+  static const double fontJudul = 28; // headlineLarge
+  static const double fontSambutan = 26; // "Welcome back!" di layar auth
+  static const double fontLabelInput = 12; // label di atas PillTextField
 
-  // Jarak rapat: aplikasi kerja B2B, banyak data per layar.
+  static const double jarakTipis = 2;
   static const double jarakMini = 4;
-  static const double jarakKecil = 8; // antar-elemen
-  static const double jarakSedang = 12; // padding kartu
-  static const double jarakTepi = 14; // tepi layar
-  static const double jarakBesar = 16;
+  static const double jarakLabel = 6; // padding & radius label kecil
+  static const double jarakKecil = 8;
+  static const double jarakSedang = 12;
+  static const double jarakTepi = 16;
+  static const double jarakBesar = 20;
+  static const double jarakInput = 14; // padding vertikal input & tombol
 
   static const double radiusChip = 8;
   static const double radiusTombol = 12;
-  static const double radius = 14; // kartu
-  static const double radiusBesar = 16; // kartu besar, bar bawah
-  static const double radiusKapsul = 999; // input, search
+  static const double radius = 16; // kartu
+  static const double radiusBesar = 20;
+  static const double radiusKapsul = 50; // input & tombol kapsul
 
-  static const double tinggiTombol = 46;
-  static const double tinggiInput = 44;
-  static const double ukuranTombolIkon = 44; // area ketuk minimal 44
-  static const double tinggiChip = 32; // area ketuk tetap 44 lewat padding
-  static const double ukuranTombolKecil = 32; // hati di kartu, tombol +/-
-  static const double ukuranLingkaranLangkah = 26; // stepper upload
+  static const double tinggiTombol = 48;
+  static const double tinggiInput = 48;
+  static const double ukuranTombolIkon = 44;
+  static const double tinggiChip = 32;
+  static const double ukuranTombolKecil = 32;
+  static const double ukuranLingkaranLangkah = 28;
   static const double ikonKecil = 16;
   static const double ikonSedang = 20;
+  static const double ikonMata = 18; // ikon tampilkan password
+  static const double tandaValid = 26; // lingkaran centang email valid
+  static const double ikonCentang = 14;
   static const double ikonLogo = 72;
-  static const double gambarKartu = 84; // foto kartu listing versi daftar
-  static const double gambarDetail = 240; // foto besar di halaman detail
-  static const double tinggiGelombang = 28; // gelombang di bawah header
-  static const double rasioKotakRingkasan = 1.6; // lebar : tinggi kotak angka di Dasbor
+  static const double logoHeader = 24; // logo kecil di samping tulisan Recovera
+  static const double logoHeaderAuth = 96; // logo mark di header Login/Register
+  static const double tombolHeader = 38; // tombol bulat di header biru (area ketuk 44)
+  static const double jarakAuthSisi = 24; // padding kiri-kanan kartu putih auth
+  static const double jarakAuthAtas = 64; // ruang kurva gelombang di atas kartu auth
+  static const double gambarKartu = 84;
+  static const double gambarDetail = 240;
+  static const double tinggiGelombang = 28;
+  static const double rasioKotakRingkasan = 1.6;
 
   static const TextStyle gayaHarga = TextStyle(
     fontSize: fontSubjudul,
@@ -114,82 +122,90 @@ class AppTheme {
     color: warnaTeksRedup,
     decoration: TextDecoration.lineThrough,
   );
-
-  // Tanpa fontFamily: font ikut tema (Plus Jakarta Sans) lewat DefaultTextStyle.
   static const TextStyle gayaJudul = TextStyle(
-    fontSize: fontJudul,
-    fontWeight: FontWeight.w800,
-    color: warnaTeks,
+    fontSize: fontBesar,
+    fontWeight: FontWeight.w700,
+    color: warnaNavy,
+    letterSpacing: -0.3,
   );
   static const TextStyle gayaSubjudul = TextStyle(
-    fontSize: fontSubjudul,
-    fontWeight: FontWeight.w700,
-    color: warnaTeks,
+    fontSize: fontSedang,
+    fontWeight: FontWeight.w600,
+    color: warnaNavy,
   );
-  static const TextStyle gayaTeks = TextStyle(
-    fontSize: fontNormal,
-    color: warnaTeks,
-  );
-  static const TextStyle gayaTeksRedup = TextStyle(
-    fontSize: fontNormal,
-    color: warnaTeksRedup,
-  );
+  static const TextStyle gayaTeks = TextStyle(fontSize: fontNormal, color: warnaNavy);
+  static const TextStyle gayaTeksRedup = TextStyle(fontSize: fontNormal, color: warnaTeksRedup);
   static const TextStyle gayaLabelKapital = TextStyle(
-    fontSize: fontMini,
-    fontWeight: FontWeight.w700,
-    letterSpacing: 0.6,
+    fontSize: fontLabel,
+    fontWeight: FontWeight.w500,
+    letterSpacing: 0.8,
     color: warnaTeksRedup,
-  ); // nama penjual KAPITAL kecil di kartu
+  );
 
-  // Tema Material untuk GetMaterialApp.
+  // Tema Material untuk GetMaterialApp (mengikuti AppTheme.light Recovera lama).
   static ThemeData get tema {
     final ThemeData dasar = ThemeData(
+      useMaterial3: true,
       colorScheme: ColorScheme.fromSeed(
         seedColor: warnaUtama,
         primary: warnaUtama,
+        onPrimary: warnaPermukaan,
         secondary: warnaSekunder,
+        surface: warnaLatar,
+        onSurface: warnaNavy,
         error: warnaGalat,
-        surface: warnaPermukaan,
       ),
       scaffoldBackgroundColor: warnaLatar,
     );
     final OutlineInputBorder garisInput = OutlineInputBorder(
       borderRadius: BorderRadius.circular(radiusKapsul),
-      borderSide: const BorderSide(color: warnaGarisTegas),
+      borderSide: const BorderSide(color: warnaGaris),
     );
+    final TextStyle gayaTombol = GoogleFonts.inter(fontSize: fontSedang, fontWeight: FontWeight.w700);
+    final RoundedRectangleBorder bentukKapsul =
+        RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusKapsul));
+
     return dasar.copyWith(
-      textTheme: GoogleFonts.plusJakartaSansTextTheme(dasar.textTheme)
-          .apply(bodyColor: warnaTeks, displayColor: warnaTeks),
+      textTheme: GoogleFonts.interTextTheme(dasar.textTheme).copyWith(
+        headlineLarge: GoogleFonts.inter(
+            fontSize: fontJudul, fontWeight: FontWeight.w700, color: warnaNavy, letterSpacing: -0.5),
+        headlineMedium: GoogleFonts.inter(
+            fontSize: fontBesar, fontWeight: FontWeight.w700, color: warnaNavy, letterSpacing: -0.3),
+        // Recovera lama hampir selalu memakai w600-w700; teks biasa minimal w500
+        // supaya tidak terlihat tipis.
+        titleLarge: GoogleFonts.inter(fontSize: fontSubjudul, fontWeight: FontWeight.w700, color: warnaNavy),
+        titleMedium: GoogleFonts.inter(fontSize: fontSedang, fontWeight: FontWeight.w700, color: warnaNavy),
+        titleSmall: GoogleFonts.inter(fontSize: fontNormal, fontWeight: FontWeight.w600, color: warnaNavy),
+        bodyLarge: GoogleFonts.inter(fontSize: fontSedang, fontWeight: FontWeight.w500, color: warnaNavy),
+        bodyMedium: GoogleFonts.inter(fontSize: fontNormal, fontWeight: FontWeight.w500, color: warnaNavy),
+        bodySmall: GoogleFonts.inter(fontSize: fontKecil, fontWeight: FontWeight.w500, color: warnaTeksRedup),
+        labelLarge: GoogleFonts.inter(fontSize: fontSedang, fontWeight: FontWeight.w700),
+        labelMedium: GoogleFonts.inter(fontSize: fontKecil, fontWeight: FontWeight.w600),
+        labelSmall: GoogleFonts.inter(
+            fontSize: fontLabel, fontWeight: FontWeight.w600, color: warnaTeksRedup, letterSpacing: 0.8),
+      ),
       appBarTheme: AppBarTheme(
-        backgroundColor: warnaLatar,
-        foregroundColor: warnaTeks,
+        backgroundColor: warnaUtama,
+        foregroundColor: warnaPermukaan,
         elevation: 0,
         scrolledUnderElevation: 0,
-        centerTitle: false,
-        titleTextStyle: GoogleFonts.plusJakartaSans(
-          fontSize: fontBesar,
-          fontWeight: FontWeight.w800,
-          color: warnaTeks,
+        centerTitle: true,
+        titleTextStyle: GoogleFonts.inter(
+          fontSize: fontSubjudul,
+          fontWeight: FontWeight.w700,
+          color: warnaPermukaan,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: warnaPermukaan,
-        isDense: true,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: jarakBesar,
-          vertical: jarakSedang,
-        ),
+        fillColor: warnaLatar,
+        contentPadding: const EdgeInsets.symmetric(horizontal: jarakBesar, vertical: jarakInput),
         border: garisInput,
         enabledBorder: garisInput,
-        focusedBorder: garisInput.copyWith(
-          borderSide: const BorderSide(color: warnaUtama, width: 1.5),
-        ),
-        errorBorder: garisInput.copyWith(
-          borderSide: const BorderSide(color: warnaGalat),
-        ),
-        labelStyle: const TextStyle(fontSize: fontNormal, color: warnaTeksRedup),
-        hintStyle: const TextStyle(fontSize: fontNormal, color: warnaTeksRedup),
+        focusedBorder: garisInput.copyWith(borderSide: const BorderSide(color: warnaUtama, width: 2)),
+        errorBorder: garisInput.copyWith(borderSide: const BorderSide(color: warnaGalat)),
+        hintStyle: GoogleFonts.inter(fontSize: fontInput, fontWeight: FontWeight.w500, color: warnaTeksRedup),
+        labelStyle: GoogleFonts.inter(fontSize: fontInput, fontWeight: FontWeight.w500, color: warnaTeksRedup),
       ),
       cardTheme: CardThemeData(
         color: warnaPermukaan,
@@ -200,32 +216,39 @@ class AppTheme {
           side: const BorderSide(color: warnaGaris),
         ),
       ),
+      elevatedButtonTheme: ElevatedButtonThemeData(
+        style: ElevatedButton.styleFrom(
+          backgroundColor: warnaUtama,
+          foregroundColor: warnaPermukaan,
+          elevation: 4,
+          shadowColor: warnaUtama.withValues(alpha: 0.35),
+          shape: bentukKapsul,
+          padding: const EdgeInsets.symmetric(vertical: jarakInput, horizontal: jarakBesar + jarakMini),
+          textStyle: gayaTombol,
+        ),
+      ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: warnaUtama,
-          minimumSize: const Size.fromHeight(tinggiTombol),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusTombol)),
-          textStyle: const TextStyle(fontSize: fontSedang, fontWeight: FontWeight.w700),
+          shape: bentukKapsul,
+          textStyle: gayaTombol,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: warnaUtama,
-          side: const BorderSide(color: warnaGarisTegas),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusTombol)),
-          textStyle: const TextStyle(fontSize: fontSedang, fontWeight: FontWeight.w700),
+          side: const BorderSide(color: warnaUtama),
+          shape: bentukKapsul,
+          textStyle: gayaTombol,
         ),
       ),
       chipTheme: dasar.chipTheme.copyWith(
         backgroundColor: warnaPermukaan,
         side: const BorderSide(color: warnaGaris),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusChip)),
-        labelStyle: const TextStyle(fontSize: fontLabel, color: warnaTeks),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusKapsul)),
+        labelStyle: GoogleFonts.inter(fontSize: fontKecil, color: warnaNavy),
       ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(radiusTombol)),
-      ),
+      snackBarTheme: const SnackBarThemeData(behavior: SnackBarBehavior.floating),
       dividerTheme: const DividerThemeData(color: warnaGaris, thickness: 1, space: 1),
     );
   }

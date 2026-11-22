@@ -25,14 +25,13 @@ class FavoritScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: AppTheme.warnaPermukaan,
+        // AppBar biru tema Recovera: tombol back otomatis (putih) dari Navigator.
         title: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Favorit'),
             Text(
               'Tersimpan di HP ini',
-              style: TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w400, color: AppTheme.warnaTeksRedup),
+              style: TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w500, color: AppTheme.warnaPermukaan),
             ),
           ],
         ),

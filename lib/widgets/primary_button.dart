@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Tombol utama yang dipakai ulang di banyak layar, berlatar gradien biru.
+// Tombol utama kapsul biru dengan bayangan (PillButton Recovera lama).
 // Saat sedangMemuat = true, tombol menampilkan loading (buffer) dan tidak bisa
 // ditekan, supaya proses tidak terkirim dua kali. onPressed null = tombol nonaktif.
 class PrimaryButton extends StatelessWidget {
@@ -21,60 +21,33 @@ class PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool aktif = onPressed != null && !sedangMemuat;
-    // Saat memuat tetap biru supaya tidak terlihat seperti tombol mati.
-    final bool tampilBiru = aktif || sedangMemuat;
-    final Color warnaIsi = tampilBiru ? AppTheme.warnaPermukaan : AppTheme.warnaTeksRedup;
+    final Widget isi = sedangMemuat
+        ? const SizedBox(
+            width: AppTheme.ikonSedang,
+            height: AppTheme.ikonSedang,
+            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.warnaPermukaan),
+          )
+        : Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (ikon != null) ...[
+                Icon(ikon, size: AppTheme.ikonKecil),
+                const SizedBox(width: AppTheme.jarakKecil),
+              ],
+              Flexible(child: Text(teks, maxLines: 1, overflow: TextOverflow.ellipsis)),
+            ],
+          );
 
-    return Semantics(
-      button: true,
-      enabled: aktif,
-      child: SizedBox(
-        width: double.infinity,
-        height: AppTheme.tinggiTombol,
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: tampilBiru ? AppTheme.gradienUtama : null,
-            color: tampilBiru ? null : AppTheme.warnaGarisTegas,
-            borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
-          ),
-          child: Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
-              onTap: aktif ? onPressed : null,
-              child: Center(
-                child: sedangMemuat
-                    ? const SizedBox(
-                        width: AppTheme.ikonSedang,
-                        height: AppTheme.ikonSedang,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.warnaPermukaan),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (ikon != null) ...[
-                            Icon(ikon, size: AppTheme.ikonKecil, color: warnaIsi),
-                            const SizedBox(width: AppTheme.jarakKecil),
-                          ],
-                          Flexible(
-                            child: Text(
-                              teks,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: AppTheme.fontSedang,
-                                fontWeight: FontWeight.w700,
-                                color: warnaIsi,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ),
-        ),
+    return SizedBox(
+      width: double.infinity,
+      height: AppTheme.tinggiTombol,
+      child: ElevatedButton(
+        onPressed: sedangMemuat ? null : onPressed,
+        // Saat memuat tetap biru supaya tidak terlihat seperti tombol mati.
+        style: sedangMemuat
+            ? ElevatedButton.styleFrom(disabledBackgroundColor: AppTheme.warnaUtama)
+            : null,
+        child: isi,
       ),
     );
   }

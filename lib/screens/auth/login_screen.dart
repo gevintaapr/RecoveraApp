@@ -4,7 +4,9 @@ import '../../services/api_service.dart';
 import '../../services/local_db_service.dart';
 import '../../services/session_service.dart';
 import '../../theme/app_theme.dart';
-import '../../widgets/header_gelombang.dart';
+import '../../widgets/header_auth.dart';
+import '../../widgets/kartu_gelombang_auth.dart';
+import '../../widgets/kolom_kapsul.dart';
 import '../../widgets/primary_button.dart';
 import '../shared/main_shell.dart';
 import 'register_screen.dart';
@@ -23,8 +25,9 @@ Future<void> kembaliKeLogin(BuildContext context) async {
   );
 }
 
-// Layar login: form email + password.
-// Tombol Masuk -> ApiService.masuk() -> sesi tersimpan -> MainShell sesuai peran.
+// Layar login (tampilan Recovera lama): header biru berlogo + kartu putih
+// bergelombang berisi form email + password.
+// Tombol "Login Akun" -> ApiService.masuk() -> sesi tersimpan -> MainShell sesuai peran.
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -76,95 +79,112 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final bool emailValid = emailController.text.contains('@');
+
     return Scaffold(
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const HeaderGelombang(child: _JudulAplikasi()),
-            // Kartu form sedikit menumpuk ke header; bayangan menandai ia berada di atas.
-            Transform.translate(
-              offset: const Offset(0, -AppTheme.jarakBesar),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppTheme.jarakBesar),
-                child: Container(
-                  padding: const EdgeInsets.all(AppTheme.jarakBesar),
-                  decoration: BoxDecoration(
-                    color: AppTheme.warnaPermukaan,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusBesar),
-                    border: Border.all(color: AppTheme.warnaGaris),
-                    boxShadow: const [
-                      BoxShadow(color: AppTheme.warnaBayangan, blurRadius: AppTheme.jarakBesar, offset: Offset(0, AppTheme.jarakKecil)),
-                    ],
-                  ),
-                  child: _formMasuk(),
+      body: Column(
+        children: [
+          HeaderAuth(
+            // Cahaya putih di belakang logo (seperti Recovera lama) agar logo biru menonjol.
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(color: AppTheme.warnaCahayaLogo, blurRadius: 48, spreadRadius: 12),
+                ],
+              ),
+              child: Image.asset(
+                'assets/images/recovera-logo-mark.png',
+                width: AppTheme.logoHeaderAuth,
+                height: AppTheme.logoHeaderAuth,
+                semanticLabel: 'Logo Recovera',
+              ),
+            ),
+          ),
+          Expanded(
+            child: KartuGelombangAuth(
+              child: Form(
+                key: _kunciForm,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome back!',
+                      style: TextStyle(
+                        fontSize: AppTheme.fontSambutan,
+                        fontWeight: FontWeight.w700,
+                        color: AppTheme.warnaNavy,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                    const SizedBox(height: AppTheme.jarakMini),
+                    const Text('Halo, silakan login untuk melanjutkan.', style: AppTheme.gayaTeksRedup),
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    KolomKapsul(
+                      label: 'Email Address',
+                      petunjuk: 'nama@perusahaan.com',
+                      controller: emailController,
+                      keyboardType: TextInputType.emailAddress,
+                      textInputAction: TextInputAction.next,
+                      onChanged: (_) => setState(() {}), // tanda centang muncul saat ada '@'
+                      ikonKanan: emailValid ? const _TandaValid() : null,
+                      validator: (nilai) {
+                        if (nilai == null || nilai.trim().isEmpty) return 'Email wajib diisi';
+                        if (!nilai.contains('@')) return 'Format email tidak valid';
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: AppTheme.jarakTepi),
+                    KolomKapsul(
+                      label: 'Password',
+                      petunjuk: '••••••••',
+                      controller: passwordController,
+                      sembunyikanTeks: sembunyikanPassword,
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (_) => _masuk(),
+                      ikonKanan: IconButton(
+                        tooltip: sembunyikanPassword ? 'Tampilkan password' : 'Sembunyikan password',
+                        onPressed: () => setState(() => sembunyikanPassword = !sembunyikanPassword),
+                        icon: Icon(
+                          sembunyikanPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          size: AppTheme.ikonMata,
+                          color: AppTheme.warnaTeksRedup,
+                        ),
+                      ),
+                      validator: (nilai) => (nilai == null || nilai.isEmpty) ? 'Password wajib diisi' : null,
+                    ),
+                    const SizedBox(height: AppTheme.jarakBesar + AppTheme.jarakKecil),
+                    PrimaryButton(teks: 'Login Akun', sedangMemuat: sedangMemuat, onPressed: _masuk),
+                    const SizedBox(height: AppTheme.jarakBesar),
+                    Center(
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text(
+                            'Belum punya akun?',
+                            style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                            ),
+                            child: const Text(
+                              'Sign up',
+                              style: TextStyle(
+                                fontSize: AppTheme.fontInput,
+                                fontWeight: FontWeight.w700,
+                                color: AppTheme.warnaUtama,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _formMasuk() {
-    return Form(
-      key: _kunciForm,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Masuk ke akun',
-            style: TextStyle(fontSize: AppTheme.fontBesar, fontWeight: FontWeight.w800, color: AppTheme.warnaNavy),
-          ),
-          const Text(
-            'Gunakan email bisnis yang terdaftar.',
-            style: TextStyle(fontSize: AppTheme.fontNormal, color: AppTheme.warnaTeksRedup),
-          ),
-          const SizedBox(height: AppTheme.jarakBesar),
-          const _LabelKolom('Email'),
-          TextFormField(
-            controller: emailController,
-            keyboardType: TextInputType.emailAddress,
-            autofillHints: const [AutofillHints.email],
-            decoration: const InputDecoration(
-              hintText: 'email@usahaanda.com',
-              fillColor: AppTheme.warnaLatar,
-              prefixIcon: Icon(Icons.mail_outline, size: AppTheme.ikonKecil),
-            ),
-            validator: (nilai) {
-              if (nilai == null || nilai.trim().isEmpty) return 'Email wajib diisi';
-              if (!nilai.contains('@')) return 'Format email tidak valid';
-              return null;
-            },
-          ),
-          const SizedBox(height: AppTheme.jarakSedang),
-          const _LabelKolom('Password'),
-          TextFormField(
-            controller: passwordController,
-            obscureText: sembunyikanPassword,
-            autofillHints: const [AutofillHints.password],
-            decoration: InputDecoration(
-              hintText: 'Minimal 8 karakter',
-              fillColor: AppTheme.warnaLatar,
-              prefixIcon: const Icon(Icons.lock_outline, size: AppTheme.ikonKecil),
-              suffixIcon: IconButton(
-                tooltip: sembunyikanPassword ? 'Tampilkan password' : 'Sembunyikan password',
-                icon: Icon(sembunyikanPassword ? Icons.visibility_off : Icons.visibility, size: AppTheme.ikonKecil),
-                onPressed: () => setState(() => sembunyikanPassword = !sembunyikanPassword),
-              ),
-            ),
-            validator: (nilai) => (nilai == null || nilai.isEmpty) ? 'Password wajib diisi' : null,
-          ),
-          const SizedBox(height: AppTheme.jarakBesar),
-          PrimaryButton(teks: 'Masuk', sedangMemuat: sedangMemuat, onPressed: _masuk),
-          const SizedBox(height: AppTheme.jarakKecil),
-          TextButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const RegisterScreen()),
-            ),
-            child: const Text('Belum punya akun? Daftar'),
           ),
         ],
       ),
@@ -172,44 +192,20 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-class _JudulAplikasi extends StatelessWidget {
-  const _JudulAplikasi();
+// Lingkaran hijau bercentang di ujung kolom email saat formatnya sudah benar.
+class _TandaValid extends StatelessWidget {
+  const _TandaValid();
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.only(top: AppTheme.jarakBesar, bottom: AppTheme.jarakBesar),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Recovera',
-            style: TextStyle(fontSize: AppTheme.fontJudul, fontWeight: FontWeight.w800, color: AppTheme.warnaPermukaan),
-          ),
-          SizedBox(height: AppTheme.jarakMini),
-          Text(
-            'Lelang stok pangan mendekati kedaluwarsa untuk resto, hotel, dan katering.',
-            style: TextStyle(fontSize: AppTheme.fontSedang, color: AppTheme.warnaPermukaan),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// Label di atas kolom isian (bukan label mengambang) sesuai desain.
-class _LabelKolom extends StatelessWidget {
-  final String teks;
-
-  const _LabelKolom(this.teks);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppTheme.jarakMini),
-      child: Text(
-        teks,
-        style: const TextStyle(fontSize: AppTheme.fontKecil, fontWeight: FontWeight.w700, color: AppTheme.warnaTeksSedang),
+    return Center(
+      widthFactor: 1,
+      child: Container(
+        margin: const EdgeInsets.only(right: AppTheme.jarakKecil),
+        width: AppTheme.tandaValid,
+        height: AppTheme.tandaValid,
+        decoration: const BoxDecoration(color: AppTheme.warnaLatarSukses, shape: BoxShape.circle),
+        child: const Icon(Icons.check_rounded, size: AppTheme.ikonCentang, color: AppTheme.warnaSukses),
       ),
     );
   }

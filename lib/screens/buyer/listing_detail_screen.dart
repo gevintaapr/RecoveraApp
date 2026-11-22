@@ -6,6 +6,7 @@ import '../../models/order_model.dart';
 import '../../services/api_service.dart';
 import '../../services/notification_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/tombol_kembali.dart';
 import '../../widgets/bar_bawah_beli.dart';
 import '../../widgets/dialog_faktur_sukses.dart';
 import '../../widgets/dialog_memuat.dart';
@@ -41,8 +42,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   Future<void> _muatUlang() async {
-    final Future<ListingModel> permintaanBaru =
-        ApiService.ambilDetailListing(widget.idListing);
+    final Future<ListingModel> permintaanBaru = ApiService.ambilDetailListing(
+      widget.idListing,
+    );
     setState(() {
       _futureDetail = permintaanBaru;
     });
@@ -79,7 +81,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       await NotificationService().showInstantNotification(
         id: NotificationService.idBeliBerhasil(pesanan.id),
         title: 'Pembelian berhasil',
-        body: '${pesanan.jumlah} ${listing.satuan} ${listing.namaProduk} '
+        body:
+            '${pesanan.jumlah} ${listing.satuan} ${listing.namaProduk} '
             '- total ${ListingModel.formatRupiah(pesanan.totalHarga)}',
       );
 
@@ -136,43 +139,58 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: AppTheme.warnaPermukaan,
+            // AppBar biru tema Recovera; back selalu tampil, juga saat dibuka dari notifikasi.
+            leading: const TombolKembali(),
             title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (listing != null)
                   Text(
                     [
-                      if (listing.nomorBatch != null) 'Batch ${listing.nomorBatch}',
+                      if (listing.nomorBatch != null)
+                        'Batch ${listing.nomorBatch}',
                       listing.kategori,
                     ].join(' · ').toUpperCase(),
-                    style: AppTheme.gayaLabelKapital,
+                    style: AppTheme.gayaLabelKapital.copyWith(
+                      color: AppTheme.warnaPermukaan,
+                    ),
                   ),
                 const Text('Detail produk'),
               ],
             ),
             actions: [
-              if (listing != null) TombolFavorit(favorit: FavoritModel.dariListing(listing)),
+              if (listing != null)
+                TombolFavorit(favorit: FavoritModel.dariListing(listing)),
               const SizedBox(width: AppTheme.jarakKecil),
             ],
           ),
           body: () {
-            if (snapshot.connectionState == ConnectionState.waiting && listing == null) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                listing == null) {
               return const Center(child: CircularProgressIndicator());
             }
             if (snapshot.hasError) {
-              final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
+              final String pesan = snapshot.error.toString().replaceFirst(
+                'Exception: ',
+                '',
+              );
               final bool sesiBerakhir = pesan == 'Sesi berakhir';
               return EmptyState(
                 ikon: sesiBerakhir ? Icons.lock_outline : Icons.error_outline,
-                pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
+                pesan: sesiBerakhir
+                    ? 'Sesi berakhir, silakan masuk lagi.'
+                    : pesan,
                 teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-                onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
+                onTombolDitekan: sesiBerakhir
+                    ? () => kembaliKeLogin(context)
+                    : _muatUlang,
               );
             }
             return RefreshIndicator(
               onRefresh: _muatUlang,
-              child: IsiDetailListing(listing: listing!, onHargaTurun: _muatUlang),
+              child: IsiDetailListing(
+                listing: listing!,
+                onHargaTurun: _muatUlang,
+              ),
             );
           }(),
           bottomNavigationBar: listing == null
@@ -180,7 +198,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               : BarBawahBeli(
                   listing: listing,
                   jumlah: _jumlahBeli,
-                  onJumlahDiubah: (nilai) => setState(() => _jumlahBeli = nilai),
+                  onJumlahDiubah: (nilai) =>
+                      setState(() => _jumlahBeli = nilai),
                   onBeliDitekan: () => _prosesBeli(listing),
                 ),
         );

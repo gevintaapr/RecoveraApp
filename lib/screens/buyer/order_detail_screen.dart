@@ -4,6 +4,7 @@ import '../../models/listing_model.dart';
 import '../../models/order_model.dart';
 import '../../services/api_service.dart';
 import '../../theme/app_theme.dart';
+import '../../widgets/tombol_kembali.dart';
 import '../../widgets/baris_info.dart';
 import '../../widgets/dialog_memuat.dart';
 import '../../widgets/empty_state.dart';
@@ -39,8 +40,9 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Future<void> _muatUlang() async {
-    final Future<OrderModel> permintaanBaru =
-        ApiService.ambilDetailPesanan(widget.idPesanan);
+    final Future<OrderModel> permintaanBaru = ApiService.ambilDetailPesanan(
+      widget.idPesanan,
+    );
     setState(() {
       _futureDetail = permintaanBaru;
     });
@@ -56,19 +58,14 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Pengingat telah dikirim ke penjual!'),
-        ),
+        const SnackBar(content: Text('Pengingat telah dikirim ke penjual!')),
       );
     } catch (e) {
       if (!mounted) return;
       Navigator.pop(context);
       final String pesan = e.toString().replaceFirst('Exception: ', '');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(pesan),
-          backgroundColor: AppTheme.warnaGalat,
-        ),
+        SnackBar(content: Text(pesan), backgroundColor: AppTheme.warnaGalat),
       );
     }
   }
@@ -95,10 +92,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(pesan),
-          backgroundColor: AppTheme.warnaGalat,
-        ),
+        SnackBar(content: Text(pesan), backgroundColor: AppTheme.warnaGalat),
       );
     }
   }
@@ -112,7 +106,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Pesanan #${widget.idPesanan}')),
+      appBar: AppBar(
+        leading: const TombolKembali(), // selalu tampil, juga saat dibuka dari notifikasi
+        title: Text('Pesanan #${widget.idPesanan}'),
+      ),
       body: FutureBuilder<OrderModel>(
         future: _futureDetail,
         builder: (context, snapshot) {
@@ -151,10 +148,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       '${ListingModel.formatTanggal(pesanan.dibuatPada)}, ${ListingModel.formatJam(pesanan.dibuatPada)}',
                 ),
                 if (widget.isPenjual)
-                  BarisInfo(
-                    label: 'Pembeli',
-                    nilai: pesanan.namaPembeli ?? '-',
-                  )
+                  BarisInfo(label: 'Pembeli', nilai: pesanan.namaPembeli ?? '-')
                 else
                   BarisInfo(
                     label: 'Penjual',

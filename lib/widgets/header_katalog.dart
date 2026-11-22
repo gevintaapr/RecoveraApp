@@ -7,6 +7,7 @@ import '../routes/app_routes.dart';
 import '../screens/shared/notification_screen.dart';
 import '../theme/app_theme.dart';
 import 'header_gelombang.dart';
+import 'merek_recovera.dart';
 import 'tombol_ikon_kaca.dart';
 
 // Header gelombang di atas Katalog pembeli:
@@ -49,16 +50,7 @@ class HeaderKatalog extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
-                child: Text(
-                  'Recovera',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontBesar,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.warnaPermukaan,
-                  ),
-                ),
-              ),
+              const Expanded(child: MerekRecovera()),
               Obx(() => TombolIkonKaca(
                     ikon: Icons.favorite_border,
                     keterangan: 'Favorit',

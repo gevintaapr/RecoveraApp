@@ -3,9 +3,9 @@ import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 
 import '../theme/app_theme.dart';
 
-// Header bergradien dengan gelombang di bawahnya, dipakai Katalog, Dasbor penjual,
-// dan Login. Gelombang adalah motif identitas Recovera (tema laut); isi header
-// (sapaan, tombol ikon) dikirim lewat [child].
+// Header biru bergelombang ala Recovera (RecoveraWaveHeader lama), dipakai di
+// Katalog, Dasbor penjual, dan Login. Isi header dikirim lewat [child];
+// tingginya mengikuti isi + ruang gelombang di bawah.
 class HeaderGelombang extends StatelessWidget {
   final Widget child;
 
@@ -13,72 +13,75 @@ class HeaderGelombang extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Ikon status bar putih karena latar header gelap.
+    // Ikon status bar putih karena latar header biru.
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.light,
-      child: DecoratedBox(
-        decoration: const BoxDecoration(gradient: AppTheme.gradienHeader),
-        child: SafeArea(
-          bottom: false,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  AppTheme.jarakBesar,
-                  AppTheme.jarakKecil,
-                  AppTheme.jarakBesar,
-                  AppTheme.jarakKecil,
-                ),
-                child: child,
-              ),
-              // CATATAN: Menggunakan CustomPaint + Path (elemen di luar modul)
-              // Fungsi: menggambar dua lapis gelombang di tepi bawah header.
-              // Alasan: widget bawaan Modul II hanya bisa membuat sudut lurus/bulat.
-              // Cara kerja: _PelukisGelombang menarik kurva bezier dengan Path, lalu
-              //         mengisinya dengan warna latar agar header "menyatu" ke isi layar.
-              const SizedBox(
-                height: AppTheme.tinggiGelombang,
-                width: double.infinity,
-                child: CustomPaint(painter: _PelukisGelombang()),
-              ),
-            ],
+      // CATATAN: Menggunakan ClipPath + CustomClipper (elemen di luar modul)
+      // Fungsi: memotong tepi bawah header menjadi bentuk gelombang.
+      // Alasan: ciri khas tampilan Recovera; widget Modul II hanya bersudut lurus/bulat.
+      // Cara kerja: dua lapis Container dipotong dengan Path kurva bezier; lapis
+      //         belakang (biru muda) sedikit lebih rendah sehingga tampak dua gelombang.
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: ClipPath(
+              clipper: _PemotongGelombangBelakang(),
+              child: const ColoredBox(color: AppTheme.warnaGelombang),
+            ),
           ),
-        ),
+          ClipPath(
+            clipper: _PemotongGelombangDepan(),
+            child: Container(
+              width: double.infinity,
+              color: AppTheme.warnaUtama,
+              padding: const EdgeInsets.only(bottom: AppTheme.tinggiGelombang),
+              child: SafeArea(
+                bottom: false,
+                // Jarak rapat seperti header Recovera lama (16, 12, 16, lalu ruang gelombang).
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppTheme.jarakTepi,
+                    AppTheme.jarakMini,
+                    AppTheme.jarakTepi,
+                    0,
+                  ),
+                  child: child,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _PelukisGelombang extends CustomPainter {
-  const _PelukisGelombang();
-
+class _PemotongGelombangDepan extends CustomClipper<Path> {
   @override
-  void paint(Canvas canvas, Size size) {
-    final double l = size.width;
-    final double t = size.height;
-
-    // Lapis belakang: cyan transparan, sedikit lebih tinggi.
-    final Path lapisBelakang = Path()
-      ..moveTo(0, t * 0.6)
-      ..cubicTo(l * 0.23, 0, l * 0.46, t, l * 0.69, t * 0.47)
-      ..cubicTo(l * 0.85, t * 0.2, l * 0.95, t * 0.3, l, t * 0.4)
-      ..lineTo(l, t)
-      ..lineTo(0, t)
+  Path getClip(Size size) {
+    return Path()
+      ..lineTo(0, size.height - 18)
+      ..cubicTo(size.width * 0.3, size.height + 4, size.width * 0.68, size.height - 34, size.width,
+          size.height - 14)
+      ..lineTo(size.width, 0)
       ..close();
-    canvas.drawPath(lapisBelakang, Paint()..color = AppTheme.warnaGelombang);
-
-    // Lapis depan: warna latar layar.
-    final Path lapisDepan = Path()
-      ..moveTo(0, t * 0.8)
-      ..cubicTo(l * 0.26, t * 0.33, l * 0.51, t * 1.1, l * 0.77, t * 0.6)
-      ..cubicTo(l * 0.9, t * 0.5, l * 0.97, t * 0.55, l, t * 0.6)
-      ..lineTo(l, t)
-      ..lineTo(0, t)
-      ..close();
-    canvas.drawPath(lapisDepan, Paint()..color = AppTheme.warnaLatar);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _PemotongGelombangBelakang extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    return Path()
+      ..lineTo(0, size.height - 8)
+      ..cubicTo(size.width * 0.34, size.height + 10, size.width * 0.7, size.height - 26, size.width,
+          size.height - 5)
+      ..lineTo(size.width, 0)
+      ..close();
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
 }

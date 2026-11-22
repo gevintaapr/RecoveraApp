@@ -6,6 +6,7 @@ import '../models/user_model.dart';
 import '../screens/shared/notification_screen.dart';
 import '../theme/app_theme.dart';
 import 'header_gelombang.dart';
+import 'merek_recovera.dart';
 import 'tombol_ikon_kaca.dart';
 
 // Header gelombang: nama aplikasi + lonceng kaca (badge GetX), sapaan perusahaan, kota gudang.
@@ -31,16 +32,7 @@ class HeaderDasbor extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Expanded(
-                child: Text(
-                  'Recovera',
-                  style: TextStyle(
-                    fontSize: AppTheme.fontBesar,
-                    fontWeight: FontWeight.w800,
-                    color: AppTheme.warnaPermukaan,
-                  ),
-                ),
-              ),
+              const Expanded(child: MerekRecovera(label: 'PENJUAL')),
               Obx(
                 () => TombolIkonKaca(
                   ikon: Icons.notifications_none,
@@ -79,6 +71,7 @@ class HeaderDasbor extends StatelessWidget {
                 'Gudang $kotaGudang',
                 style: const TextStyle(
                   fontSize: AppTheme.fontKecil,
+                  fontWeight: FontWeight.w600,
                   color: AppTheme.warnaPermukaan,
                 ),
               ),
