@@ -326,10 +326,15 @@ async def create_seller_inventory_draft(
         raise
     except Exception as e:
         db.rollback()
+        err_msg = str(e)
+        if "listings_price_order_chk" in err_msg:
+            clean_msg = "Harga awal lelang harus berada di antara batas minimum dan harga normal"
+        else:
+            clean_msg = f"Gagal membuat draf inventaris: {err_msg}"
         raise AppException(
             "DRAFT_CREATION_FAILED", 
-            f"Failed to create inventory draft: {str(e)}", 
-            status.HTTP_500_INTERNAL_SERVER_ERROR
+            clean_msg, 
+            status.HTTP_400_BAD_REQUEST
         )
 
 
@@ -369,6 +374,29 @@ async def update_seller_inventory_draft(
         if "min_price" in values and values["min_price"] <= 0:
             raise AppException("INVALID_PRICE", "Minimum price must be greater than zero", status.HTTP_422_UNPROCESSABLE_ENTITY)
         
+        tentative_normal = values.get("normal_price", listing.normal_price)
+        tentative_start = values.get("start_price", listing.start_price)
+        tentative_min = values.get("min_price", listing.min_price)
+
+        if tentative_start is not None and tentative_normal is not None and float(tentative_start) > float(tentative_normal):
+            raise AppException(
+                "INVALID_START_PRICE",
+                f"Harga awal lelang (Rp {int(float(tentative_start)):,}) tidak boleh melebihi harga normal (Rp {int(float(tentative_normal)):,})",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if tentative_start is not None and tentative_min is not None and float(tentative_start) < float(tentative_min):
+            raise AppException(
+                "INVALID_START_PRICE",
+                f"Harga awal lelang (Rp {int(float(tentative_start)):,}) tidak boleh kurang dari batas minimum (Rp {int(float(tentative_min)):,})",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        if tentative_min is not None and tentative_normal is not None and float(tentative_min) > float(tentative_normal):
+            raise AppException(
+                "INVALID_MIN_PRICE",
+                f"Batas minimum (Rp {int(float(tentative_min)):,}) tidak boleh melebihi harga normal (Rp {int(float(tentative_normal)):,})",
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+            )
+        
         if "expiry_date" in values:
             if values["expiry_date"] <= date.today():
                 raise AppException("INVALID_EXPIRY_DATE", "Expiry date must be in the future", status.HTTP_422_UNPROCESSABLE_ENTITY)
@@ -396,10 +424,15 @@ async def update_seller_inventory_draft(
         raise
     except Exception as e:
         db.rollback()
+        err_msg = str(e)
+        if "listings_price_order_chk" in err_msg:
+            clean_msg = "Harga awal lelang harus berada di antara batas minimum dan harga normal"
+        else:
+            clean_msg = f"Gagal memperbarui draf inventaris: {err_msg}"
         raise AppException(
             "DRAFT_UPDATE_FAILED",
-            f"Failed to update inventory draft: {str(e)}",
-            status.HTTP_500_INTERNAL_SERVER_ERROR
+            clean_msg,
+            status.HTTP_400_BAD_REQUEST
         )
 
 

@@ -71,9 +71,29 @@ def execute_buy_now(
     )
     db.add(order)
 
-    buyer.total_orders_completed += 1
-    db.commit()
-    db.refresh(order)
+    if buyer.total_orders_completed is None:
+        buyer.total_orders_completed = 1
+    else:
+        buyer.total_orders_completed += 1
+
+    try:
+        db.commit()
+        db.refresh(order)
+    except AppException:
+        db.rollback()
+        raise
+    except Exception as e:
+        db.rollback()
+        err_msg = str(e)
+        if "listings_qty_chk" in err_msg or "qty" in err_msg:
+            clean_msg = "Stok produk tidak mencukupi atau sudah habis terjual"
+        else:
+            clean_msg = f"Gagal memproses pesanan: {err_msg}"
+        raise AppException(
+            code="ORDER_CREATION_FAILED",
+            message=clean_msg,
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         from app.services.push_service import notify_user
