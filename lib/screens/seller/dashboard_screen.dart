@@ -11,10 +11,8 @@ import '../../widgets/empty_state.dart';
 import '../../widgets/header_dasbor.dart';
 import '../../widgets/kartu_angka.dart';
 import '../../widgets/kartu_pesanan_menunggu.dart';
-import '../../widgets/kartu_stok_kedaluwarsa.dart';
 import '../auth/login_screen.dart';
 import '../shared/orders_screen.dart';
-import 'listing_detail_screen.dart';
 import 'listing_form_screen.dart';
 
 // Tab Dasbor (penjual): header usaha, 4 angka ringkasan, tombol upload stok,
@@ -85,13 +83,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
     if (!mounted) return;
     await _muatUlang();
-  }
-
-  void _bukaDetailStok(int idListing) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => SellerListingDetailScreen(idListing: idListing)),
-    ).then((_) => _muatUlang());
   }
 
   @override
@@ -188,8 +179,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       onBukaPesanan: _bukaSemuaPesanan,
                     ),
                     const SizedBox(height: AppTheme.jarakBesar),
-                    _KartuStokMendekati(daftar: segeraKedaluwarsa, onBuka: _bukaDetailStok),
-                    const SizedBox(height: AppTheme.jarakBesar),
                     KartuPesananMenunggu(
                       daftarPesanan: perluDiproses,
                       onBerubah: _muatUlang,
@@ -206,32 +195,3 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-// Kartu putih "Stok Mendekati Kedaluwarsa" berisi baris stok (maks. 5).
-class _KartuStokMendekati extends StatelessWidget {
-  final List<ListingModel> daftar;
-  final ValueChanged<int> onBuka;
-
-  const _KartuStokMendekati({required this.daftar, required this.onBuka});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppTheme.jarakTepi),
-      decoration: BoxDecoration(color: AppTheme.warnaPermukaan, borderRadius: BorderRadius.circular(AppTheme.radius)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Text(
-            'Stok Mendekati Kedaluwarsa',
-            style: TextStyle(fontSize: AppTheme.fontSedang, fontWeight: FontWeight.w700, color: AppTheme.warnaNavy),
-          ),
-          const SizedBox(height: AppTheme.jarakKecil),
-          if (daftar.isEmpty)
-            const Text('Tidak ada stok yang mendekati kedaluwarsa.', style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup))
-          else
-            ...daftar.take(5).map((listing) => KartuStokKedaluwarsa(listing: listing, onTap: () => onBuka(listing.id))),
-        ],
-      ),
-    );
-  }
-}

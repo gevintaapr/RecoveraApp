@@ -39,11 +39,16 @@ class ListingCard extends StatelessWidget {
           onTap: onTap,
           child: Ink(
             decoration: BoxDecoration(
+              //ganti warna card
               color: AppTheme.warnaPermukaan,
               borderRadius: BorderRadius.circular(AppTheme.radius),
               border: Border.all(color: AppTheme.warnaGaris),
               boxShadow: const [
-                BoxShadow(color: AppTheme.warnaBayanganKartu, blurRadius: 8, offset: Offset(0, 2)),
+                BoxShadow(
+                  color: AppTheme.warnaBayanganKartu,
+                  blurRadius: 8,
+                  offset: Offset(0, 2),
+                ),
               ],
             ),
             padding: const EdgeInsets.all(AppTheme.jarakSedang),
@@ -65,12 +70,21 @@ class ListingCard extends StatelessWidget {
                         Positioned(
                           right: -AppTheme.jarakKecil,
                           bottom: -AppTheme.jarakKecil,
-                          child: TombolFavorit(favorit: FavoritModel.dariListing(listing), bulat: true),
+                          child: TombolFavorit(
+                            favorit: FavoritModel.dariListing(listing),
+                            bulat: true,
+                          ),
                         ),
                     ],
                   ),
                   const SizedBox(width: AppTheme.jarakSedang),
-                  Expanded(child: _InfoTengah(listing: listing, untukPenjual: untukPenjual, onHargaTurun: onHargaTurun)),
+                  Expanded(
+                    child: _InfoTengah(
+                      listing: listing,
+                      untukPenjual: untukPenjual,
+                      onHargaTurun: onHargaTurun,
+                    ),
+                  ),
                   const SizedBox(width: AppTheme.jarakKecil),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
@@ -78,7 +92,10 @@ class ListingCard extends StatelessWidget {
                     children: [
                       _TeksSisaHari(sisaHari: listing.sisaHari),
                       if (untukPenjual)
-                        StatusBadge(status: listing.status, label: listing.labelStatus)
+                        StatusBadge(
+                          status: listing.status,
+                          label: listing.labelStatus,
+                        )
                       else
                         _TombolPanah(onTap: onTap),
                     ],
@@ -98,12 +115,19 @@ class _InfoTengah extends StatelessWidget {
   final bool untukPenjual;
   final VoidCallback? onHargaTurun;
 
-  const _InfoTengah({required this.listing, required this.untukPenjual, this.onHargaTurun});
+  const _InfoTengah({
+    required this.listing,
+    required this.untukPenjual,
+    this.onHargaTurun,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final String labelAtas = untukPenjual ? 'Stok ${listing.stok} ${listing.satuan}' : (listing.namaPenjual ?? '');
-    final bool tampilHitungMundur = listing.status == 'active' &&
+    final String labelAtas = untukPenjual
+        ? 'Stok ${listing.stok} ${listing.satuan}'
+        : (listing.namaPenjual ?? '');
+    final bool tampilHitungMundur =
+        listing.status == 'active' &&
         listing.waktuTurunBerikutnya != null &&
         listing.hargaSekarang > listing.hargaMinimum;
 
@@ -142,11 +166,18 @@ class _InfoTengah extends StatelessWidget {
                 listing.merek!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontLabel,
+                  color: AppTheme.warnaTeksRedup,
+                ),
               ),
             if (tampilHitungMundur) ...[
               const SizedBox(height: AppTheme.jarakMini),
-              PriceCountdown(waktuTurun: listing.waktuTurunBerikutnya!, onHargaTurun: onHargaTurun, ringkas: true),
+              PriceCountdown(
+                waktuTurun: listing.waktuTurunBerikutnya!,
+                onHargaTurun: onHargaTurun,
+                ringkas: true,
+              ),
             ],
           ],
         ),
@@ -155,19 +186,36 @@ class _InfoTengah extends StatelessWidget {
           Row(
             children: [
               if (listing.jarakKm != null) ...[
-                const Icon(Icons.near_me_outlined, size: AppTheme.fontKecil, color: AppTheme.warnaJarak),
+                const Icon(
+                  Icons.near_me_outlined,
+                  size: AppTheme.fontKecil,
+                  color: AppTheme.warnaJarak,
+                ),
                 const SizedBox(width: AppTheme.jarakTipis),
                 Text(
                   ListingModel.formatJarak(listing.jarakKm!),
-                  style: const TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w600, color: AppTheme.warnaJarak),
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontLabel,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.warnaJarak,
+                  ),
                 ),
-                const Text('  •  ', style: TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup)),
+                const Text(
+                  '  •  ',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontLabel,
+                    color: AppTheme.warnaTeksRedup,
+                  ),
+                ),
               ],
               Flexible(
                 child: Text(
                   listing.kotaGudang ?? '-',
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: AppTheme.fontLabel, color: AppTheme.warnaTeksRedup),
+                  style: const TextStyle(
+                    fontSize: AppTheme.fontLabel,
+                    color: AppTheme.warnaTeksRedup,
+                  ),
                 ),
               ),
             ],
@@ -182,12 +230,20 @@ class _InfoTengah extends StatelessWidget {
             children: [
               Text(
                 ListingModel.formatRupiah(listing.hargaSekarang),
-                style: const TextStyle(fontSize: AppTheme.fontNormal, fontWeight: FontWeight.w800, color: AppTheme.warnaUtama),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontNormal,
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.warnaUtama,
+                ),
               ),
               const SizedBox(width: AppTheme.jarakMini),
               Text(
                 '/ ${listing.satuan}',
-                style: const TextStyle(fontSize: AppTheme.fontMini, fontWeight: FontWeight.w500, color: AppTheme.warnaTeksRedup),
+                style: const TextStyle(
+                  fontSize: AppTheme.fontMini,
+                  fontWeight: FontWeight.w500,
+                  color: AppTheme.warnaTeksRedup,
+                ),
               ),
               const SizedBox(width: AppTheme.jarakMini),
               Text(
@@ -221,7 +277,11 @@ class _TeksSisaHari extends StatelessWidget {
         : (hari <= 7 ? AppTheme.warnaSisaSedang : AppTheme.warnaSisaAman);
     return Text(
       hari <= 0 ? 'Sudah Kedaluwarsa' : 'Sisa $hari Hari',
-      style: TextStyle(fontSize: AppTheme.fontLabel, fontWeight: FontWeight.w600, color: warna),
+      style: TextStyle(
+        fontSize: AppTheme.fontLabel,
+        fontWeight: FontWeight.w600,
+        color: warna,
+      ),
     );
   }
 }
@@ -238,12 +298,22 @@ class _TombolPanah extends StatelessWidget {
       tooltip: 'Lihat detail',
       onPressed: onTap,
       padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(minWidth: AppTheme.ukuranTombolIkon, minHeight: AppTheme.ukuranTombolIkon),
+      constraints: const BoxConstraints(
+        minWidth: AppTheme.ukuranTombolIkon,
+        minHeight: AppTheme.ukuranTombolIkon,
+      ),
       icon: Container(
         width: AppTheme.tombolPanah,
         height: AppTheme.tombolPanah,
-        decoration: BoxDecoration(color: AppTheme.warnaUtama, borderRadius: BorderRadius.circular(AppTheme.radiusSedang)),
-        child: const Icon(Icons.arrow_forward_rounded, color: AppTheme.warnaPermukaan, size: AppTheme.ikonPanah),
+        decoration: BoxDecoration(
+          color: AppTheme.warnaUtama,
+          borderRadius: BorderRadius.circular(AppTheme.radiusSedang),
+        ),
+        child: const Icon(
+          Icons.arrow_forward_rounded,
+          color: AppTheme.warnaPermukaan,
+          size: AppTheme.ikonPanah,
+        ),
       ),
     );
   }

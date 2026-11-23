@@ -90,7 +90,11 @@ class _LoginScreenState extends State<LoginScreen> {
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
-                  BoxShadow(color: AppTheme.warnaCahayaLogo, blurRadius: 48, spreadRadius: 12),
+                  BoxShadow(
+                    color: AppTheme.warnaCahayaLogo,
+                    blurRadius: 48,
+                    spreadRadius: 12,
+                  ),
                 ],
               ),
               child: Image.asset(
@@ -118,7 +122,10 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: AppTheme.jarakMini),
-                    const Text('Halo, silakan login untuk melanjutkan.', style: AppTheme.gayaTeksRedup),
+                    const Text(
+                      'Halo, silakan login untuk melanjutkan.',
+                      style: AppTheme.gayaTeksRedup,
+                    ),
                     const SizedBox(height: AppTheme.jarakBesar),
                     KolomKapsul(
                       label: 'Email Address',
@@ -126,11 +133,16 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: emailController,
                       keyboardType: TextInputType.emailAddress,
                       textInputAction: TextInputAction.next,
-                      onChanged: (_) => setState(() {}), // tanda centang muncul saat ada '@'
+                      onChanged: (_) =>
+                          setState(() {}), // tanda centang muncul saat ada '@'
                       ikonKanan: emailValid ? const _TandaValid() : null,
                       validator: (nilai) {
-                        if (nilai == null || nilai.trim().isEmpty) return 'Email wajib diisi';
-                        if (!nilai.contains('@')) return 'Format email tidak valid';
+                        if (nilai == null || nilai.trim().isEmpty) {
+                          return 'Email wajib diisi';
+                        }
+                        if (!nilai.contains('@')) {
+                          return 'Format email tidak valid';
+                        }
                         return null;
                       },
                     ),
@@ -143,18 +155,33 @@ class _LoginScreenState extends State<LoginScreen> {
                       textInputAction: TextInputAction.done,
                       onFieldSubmitted: (_) => _masuk(),
                       ikonKanan: IconButton(
-                        tooltip: sembunyikanPassword ? 'Tampilkan password' : 'Sembunyikan password',
-                        onPressed: () => setState(() => sembunyikanPassword = !sembunyikanPassword),
+                        tooltip: sembunyikanPassword
+                            ? 'Tampilkan password'
+                            : 'Sembunyikan password',
+                        onPressed: () => setState(
+                          () => sembunyikanPassword = !sembunyikanPassword,
+                        ),
                         icon: Icon(
-                          sembunyikanPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                          sembunyikanPassword
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
                           size: AppTheme.ikonMata,
                           color: AppTheme.warnaTeksRedup,
                         ),
                       ),
-                      validator: (nilai) => (nilai == null || nilai.isEmpty) ? 'Password wajib diisi' : null,
+                      validator: (nilai) => (nilai == null || nilai.isEmpty)
+                          ? 'Password wajib diisi'
+                          : null,
                     ),
-                    const SizedBox(height: AppTheme.jarakBesar + AppTheme.jarakKecil),
-                    PrimaryButton(teks: 'Login Akun', sedangMemuat: sedangMemuat, onPressed: _masuk),
+                    const SizedBox(
+                      height: AppTheme.jarakBesar + AppTheme.jarakKecil,
+                    ),
+                    PrimaryButton(
+                      teks: 'Login Akun',
+                      sedangMemuat: sedangMemuat,
+                      onPressed: _masuk,
+                      // warna: AppTheme.warnaUtama
+                    ),
                     const SizedBox(height: AppTheme.jarakBesar),
                     Center(
                       child: Row(
@@ -162,12 +189,17 @@ class _LoginScreenState extends State<LoginScreen> {
                         children: [
                           const Text(
                             'Belum punya akun?',
-                            style: TextStyle(fontSize: AppTheme.fontInput, color: AppTheme.warnaTeksRedup),
+                            style: TextStyle(
+                              fontSize: AppTheme.fontInput,
+                              color: AppTheme.warnaTeksRedup,
+                            ),
                           ),
                           TextButton(
                             onPressed: () => Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => const RegisterScreen(),
+                              ),
                             ),
                             child: const Text(
                               'Sign up',
@@ -204,8 +236,15 @@ class _TandaValid extends StatelessWidget {
         margin: const EdgeInsets.only(right: AppTheme.jarakKecil),
         width: AppTheme.tandaValid,
         height: AppTheme.tandaValid,
-        decoration: const BoxDecoration(color: AppTheme.warnaLatarSukses, shape: BoxShape.circle),
-        child: const Icon(Icons.check_rounded, size: AppTheme.ikonCentang, color: AppTheme.warnaSukses),
+        decoration: const BoxDecoration(
+          color: AppTheme.warnaLatarSukses,
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.check_rounded,
+          size: AppTheme.ikonCentang,
+          color: AppTheme.warnaSukses,
+        ),
       ),
     );
   }

@@ -77,7 +77,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       if (!mounted) return;
       Navigator.pop(context); // Tutup dialog loading
 
-      // Pop-up notifikasi langsung pembelian (Modul VII).
+      // Pop-up notifikasi langsung pembelian
       await NotificationService().showInstantNotification(
         id: NotificationService.idBeliBerhasil(pesanan.id),
         title: 'Pembelian berhasil',
@@ -151,7 +151,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  listing == null ? 'WHOLESALE' : 'LOT #${listing.id} • WHOLESALE',
+                  listing == null
+                      ? 'WHOLESALE'
+                      : 'LOT #${listing.id} • WHOLESALE',
                   style: const TextStyle(
                     fontSize: AppTheme.fontLabel,
                     fontWeight: FontWeight.w600,
@@ -161,7 +163,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 ),
                 const Text(
                   'Detail Produk & Batch',
-                  style: TextStyle(fontSize: AppTheme.fontJudulBagian, fontWeight: FontWeight.w700, color: AppTheme.warnaJudulKartu),
+                  style: TextStyle(
+                    fontSize: AppTheme.fontJudulBagian,
+                    fontWeight: FontWeight.w700,
+                    color: AppTheme.warnaJudulKartu,
+                  ),
                 ),
               ],
             ),

@@ -83,19 +83,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
     if (_lokasiSaya == null) await _ambilLokasi();
 
     // Urutan 'discount' diurutkan di HP karena server tidak punya parameter 'discount'
-    final String? urutanApi =
-        _filter.urutan == 'discount' ? null : _filter.urutan;
+    final String? urutanApi = _filter.urutan == 'discount'
+        ? null
+        : _filter.urutan;
 
     try {
       final List<ListingModel> daftarListing =
           await ApiService.ambilDaftarListing(
-        kataKunci: kataKunci,
-        kategori: _filter.kategori,
-        lat: _lokasiSaya?.latitude,
-        lng: _lokasiSaya?.longitude,
-        radiusKm: _filter.radiusKm,
-        urutan: urutanApi,
-      );
+            kataKunci: kataKunci,
+            kategori: _filter.kategori,
+            lat: _lokasiSaya?.latitude,
+            lng: _lokasiSaya?.longitude,
+            radiusKm: _filter.radiusKm,
+            urutan: urutanApi,
+          );
 
       // Simpan cache bila tanpa filter apa pun
       if (kataKunci.isEmpty &&
@@ -117,12 +118,15 @@ class _CatalogScreenState extends State<CatalogScreen> {
       // Pencarian & penyaringan saat offline
       final String kunci = kataKunci.toLowerCase();
       List<ListingModel> hasil = cache.where((item) {
-        final bool cocokTeks = kunci.isEmpty ||
+        final bool cocokTeks =
+            kunci.isEmpty ||
             item.namaProduk.toLowerCase().contains(kunci) ||
             (item.merek ?? '').toLowerCase().contains(kunci);
-        final bool cocokKategori = _filter.kategori == null ||
+        final bool cocokKategori =
+            _filter.kategori == null ||
             item.kategori.toLowerCase() == _filter.kategori!.toLowerCase();
-        final bool cocokRadius = _filter.radiusKm == null ||
+        final bool cocokRadius =
+            _filter.radiusKm == null ||
             (item.jarakKm ?? 0) <= _filter.radiusKm!;
         return cocokTeks && cocokKategori && cocokRadius;
       }).toList();
@@ -135,8 +139,11 @@ class _CatalogScreenState extends State<CatalogScreen> {
     List<ListingModel> hasil = daftar;
     if (_filter.maksSisaHari != null) {
       hasil = hasil
-          .where((item) =>
-              item.sisaHari != null && item.sisaHari! <= _filter.maksSisaHari!)
+          .where(
+            (item) =>
+                item.sisaHari != null &&
+                item.sisaHari! <= _filter.maksSisaHari!,
+          )
           .toList();
     }
     if (_filter.urutan == 'discount') {
@@ -145,6 +152,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     return hasil;
   }
 
+  //lbs
   Future<void> _ambilLokasi() async {
     try {
       final Position posisi = await LocationService.ambilLokasiSaatIni();
@@ -157,7 +165,8 @@ class _CatalogScreenState extends State<CatalogScreen> {
     } catch (e) {
       if (!mounted) return;
       setState(
-          () => _pesanLokasi = e.toString().replaceFirst('Exception: ', ''));
+        () => _pesanLokasi = e.toString().replaceFirst('Exception: ', ''),
+      );
     }
   }
 
@@ -255,13 +264,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
-                final String pesan = snapshot.error.toString().replaceFirst('Exception: ', '');
+                final String pesan = snapshot.error.toString().replaceFirst(
+                  'Exception: ',
+                  '',
+                );
                 final bool sesiBerakhir = pesan == 'Sesi berakhir';
                 return EmptyState(
                   ikon: sesiBerakhir ? Icons.lock_outline : Icons.wifi_off,
-                  pesan: sesiBerakhir ? 'Sesi berakhir, silakan masuk lagi.' : pesan,
+                  pesan: sesiBerakhir
+                      ? 'Sesi berakhir, silakan masuk lagi.'
+                      : pesan,
                   teksTombol: sesiBerakhir ? 'Masuk lagi' : 'Coba lagi',
-                  onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
+                  onTombolDitekan: sesiBerakhir
+                      ? () => kembaliKeLogin(context)
+                      : _muatUlang,
                 );
               }
               return DaftarKatalog(

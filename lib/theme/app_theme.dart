@@ -195,7 +195,7 @@ class AppTheme {
   static const double tinggiKotakUnggah = 180; // kotak foto kosong di alur upload
   static const double kotakIkonUnggah = 52; // lingkaran ikon di kotak foto kosong
   static const double tinggiGelombang = 28;
-  static const double rasioKotakRingkasan = 1.3;
+  static const double rasioKotakRingkasan = 1.6; // lebih ramping / tidak terlalu tinggi
 
   static const TextStyle gayaHarga = TextStyle(
     fontSize: fontSubjudul,

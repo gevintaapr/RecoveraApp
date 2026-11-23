@@ -10,6 +10,7 @@ class PrimaryButton extends StatelessWidget {
   final VoidCallback? onPressed;
   final bool sedangMemuat;
   final IconData? ikon;
+  // final Color? warna;
 
   const PrimaryButton({
     super.key,
@@ -17,6 +18,7 @@ class PrimaryButton extends StatelessWidget {
     required this.onPressed,
     this.sedangMemuat = false,
     this.ikon,
+    // this.warna,
   });
 
   @override
@@ -25,7 +27,10 @@ class PrimaryButton extends StatelessWidget {
         ? const SizedBox(
             width: AppTheme.ikonSedang,
             height: AppTheme.ikonSedang,
-            child: CircularProgressIndicator(strokeWidth: 2.5, color: AppTheme.warnaPermukaan),
+            child: CircularProgressIndicator(
+              strokeWidth: 2.5,
+              color: AppTheme.warnaPermukaan,
+            ),
           )
         : Row(
             mainAxisSize: MainAxisSize.min,
@@ -34,9 +39,13 @@ class PrimaryButton extends StatelessWidget {
                 Icon(ikon, size: AppTheme.ikonKecil),
                 const SizedBox(width: AppTheme.jarakKecil),
               ],
-              Flexible(child: Text(teks, maxLines: 1, overflow: TextOverflow.ellipsis)),
+              Flexible(
+                child: Text(teks, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
             ],
           );
+
+    // final Color warnaTombol = warna ?? AppTheme.warnaUtama;
 
     return SizedBox(
       width: double.infinity,
@@ -45,7 +54,10 @@ class PrimaryButton extends StatelessWidget {
         onPressed: sedangMemuat ? null : onPressed,
         // Saat memuat tetap biru supaya tidak terlihat seperti tombol mati.
         style: sedangMemuat
-            ? ElevatedButton.styleFrom(disabledBackgroundColor: AppTheme.warnaUtama)
+            ? ElevatedButton.styleFrom(
+                // backgroundColor: warnaTombol,
+                disabledBackgroundColor: AppTheme.warnaUtama,
+              )
             : null,
         child: isi,
       ),
