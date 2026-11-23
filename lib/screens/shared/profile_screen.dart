@@ -163,12 +163,11 @@ class _AvatarProfil extends StatelessWidget {
           colors: [AppTheme.warnaUtama, AppTheme.warnaSekunder],
         ),
       ),
-      child: Center(
-        child: Image.asset(
-          'assets/images/recovera-logo-white-mark.png',
-          width: AppTheme.logoAvatar,
-          height: AppTheme.logoAvatar,
-          semanticLabel: 'Logo Recovera',
+      child: const Center(
+        child: Icon(
+          Icons.person_rounded,
+          size: AppTheme.logoAvatar,
+          color: AppTheme.warnaPermukaan,
         ),
       ),
     );
