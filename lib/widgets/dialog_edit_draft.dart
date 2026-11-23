@@ -45,6 +45,10 @@ class _DialogEditDraftState extends State<DialogEditDraft> {
       setState(() => _pesanGalat = 'Harap lengkapi semua kolom dengan benar');
       return;
     }
+    if (hargaMinimum > hargaNormal) {
+      setState(() => _pesanGalat = 'Harga minimum tidak boleh melebihi harga normal');
+      return;
+    }
     Navigator.pop(context, <String, dynamic>{
       'name': nama,
       'qty': stok,

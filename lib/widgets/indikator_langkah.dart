@@ -2,15 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../theme/app_theme.dart';
 
-// Stepper upload stok penjual: 1 Faktur, 2 Data, 3 Harga, 4 Terbit.
-// Gaya stepper Upload Stok Recovera lama: selesai = hijau + centang,
-// aktif = biru, sisanya putih bergaris abu.
+// Stepper upload stok penjual: 1 Data Produk, 2 Review & Terbitkan.
+// Selesai = hijau + centang, aktif = biru, sisanya putih bergaris abu.
 class IndikatorLangkah extends StatelessWidget {
-  final int langkahAktif; // 1 sampai 4
+  final int langkahAktif; // 1 atau 2
 
   const IndikatorLangkah({super.key, required this.langkahAktif});
 
-  static const List<String> _daftarLangkah = ['Faktur', 'Data', 'Harga', 'Terbit'];
+  static const List<String> _daftarLangkah = ['Data Produk', 'Review & Terbitkan'];
 
   @override
   Widget build(BuildContext context) {

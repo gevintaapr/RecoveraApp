@@ -4,7 +4,7 @@ import '../theme/app_theme.dart';
 import 'indikator_langkah.dart';
 
 // AppBar terang untuk alur upload stok penjual: judul "Upload Stok" di tengah
-// dan stepper 4 langkah (Faktur, Data, Harga, Terbit) di bawahnya.
+// dan stepper 2 langkah (Data Produk, Review & Terbitkan) di bawahnya.
 class AppBarUpload extends StatelessWidget implements PreferredSizeWidget {
   final int langkahAktif;
 

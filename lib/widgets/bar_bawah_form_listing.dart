@@ -5,8 +5,8 @@ import 'bar_bawah_kaca.dart';
 import 'primary_button.dart';
 
 // Bar dua tombol di bawah form upload penjual.
-// Langkah 2: "Simpan draft" + "Lanjut ke harga".
-// Langkah 3: "Atur manual" + "Terbitkan".
+// Langkah 1: "Simpan draft" + "Lanjut ke review".
+// Langkah 2: "Atur manual" + "Terbitkan".
 class BarBawahFormListing extends StatelessWidget {
   final bool tahapForm;
   final bool sedangMemproses;
@@ -46,7 +46,7 @@ class BarBawahFormListing extends StatelessWidget {
             flex: 2,
             child: tahapForm
                 ? PrimaryButton(
-                    teks: 'Lanjut ke harga',
+                    teks: 'Lanjut ke review',
                     sedangMemuat: sedangMemproses,
                     onPressed: onTombolKanan,
                   )

@@ -4,7 +4,6 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 
-import '../models/invoice_result_model.dart';
 import '../models/listing_model.dart';
 import '../models/notification_model.dart';
 import '../models/order_model.dart';
@@ -426,24 +425,8 @@ class ApiService {
     return data['image_url'] as String;
   }
 
-  // ===== AI =====
-
-  // POST /ai/invoice (multipart, field "file")
-  // Foto faktur dibaca server (OCR), hasilnya daftar barang untuk mengisi form.
-  static Future<InvoiceResultModel> unggahFaktur({
-    required Uint8List isiFile,
-    required String namaFile,
-  }) async {
-    final Map<String, dynamic> data = await _kirimMultipart(
-      alamat: '$baseUrl/ai/invoice',
-      isiFile: isiFile,
-      namaFile: namaFile,
-    );
-    return InvoiceResultModel.fromJson(data);
-  }
-
   // CATATAN: Menggunakan http.MultipartRequest (elemen di luar modul)
-  // Fungsi: mengirim file gambar (faktur / foto produk) ke backend.
+  // Fungsi: mengirim file gambar (foto produk) ke backend.
   // Alasan: http.post di Modul V hanya mengirim teks/JSON, sedangkan
   //         endpoint upload meminta form-data berisi file.
   // Cara kerja: request dibuat, token dipasang di header, file ditempel

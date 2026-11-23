@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 
+import '../../models/draft_listing_model.dart';
 import '../../models/listing_model.dart';
 import '../../services/api_service.dart';
+import '../../services/local_db_service.dart';
 import '../../services/sensor_service.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/chip_filter_status.dart';
@@ -11,7 +13,7 @@ import '../../widgets/kartu_stok_penjual.dart';
 import '../../widgets/pengingat_draft_lokal.dart';
 import '../auth/login_screen.dart';
 import 'listing_detail_screen.dart';
-import 'upload_invoice_screen.dart';
+import 'listing_form_screen.dart';
 
 // Tab Stok (penjual): semua listing milik penjual (T6).
 // Data: ApiService.ambilInventaris() lewat FutureBuilder.
@@ -93,6 +95,65 @@ class _StockScreenState extends State<StockScreen> {
     await _muatUlang();
   }
 
+  void _bukaDaftarDraftLokal() {
+    final List<DraftListingModel> daftarDraft = LocalDbService.ambilSemuaDraft();
+    if (daftarDraft.isEmpty) return;
+    if (daftarDraft.length == 1) {
+      _bukaHalaman(ListingFormScreen(draft: daftarDraft.first));
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(AppTheme.radiusBesar)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(AppTheme.jarakBesar),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Draft Tersimpan di HP',
+                  style: TextStyle(
+                    fontSize: AppTheme.fontSubjudul,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: AppTheme.jarakKecil),
+                ...daftarDraft.map((draft) => ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.edit_note, color: AppTheme.warnaUtama),
+                      title: Text(
+                        draft.namaProduk,
+                        style: const TextStyle(fontWeight: FontWeight.w700),
+                      ),
+                      subtitle: Text(
+                        '${draft.jumlah} ${draft.satuan} · disimpan ${ListingModel.formatTanggal(draft.waktuDisimpan)}',
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, color: AppTheme.warnaGalat),
+                        onPressed: () {
+                          LocalDbService.hapusDraft(draft.idDraft);
+                          Navigator.pop(context);
+                          setState(() {});
+                        },
+                      ),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _bukaHalaman(ListingFormScreen(draft: draft));
+                      },
+                    )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return FutureBuilder<List<ListingModel>>(
@@ -119,7 +180,7 @@ class _StockScreenState extends State<StockScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _panelAtas(semuaStok),
-            PengingatDraftLokal(onTap: () => _bukaHalaman(const UploadInvoiceScreen())),
+            PengingatDraftLokal(onTap: _bukaDaftarDraftLokal),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _muatUlang,
@@ -198,13 +259,13 @@ class _StockScreenState extends State<StockScreen> {
                 borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
                 child: InkWell(
                   borderRadius: BorderRadius.circular(AppTheme.radiusTombol),
-                  onTap: () => _bukaHalaman(const UploadInvoiceScreen()),
+                  onTap: () => _bukaHalaman(const ListingFormScreen()),
                   child: const SizedBox(
                     width: AppTheme.ukuranTombolIkon,
                     height: AppTheme.ukuranTombolIkon,
                     child: Tooltip(
                       message: 'Upload Stok',
-                      child: Icon(Icons.add_a_photo_outlined, color: AppTheme.warnaPermukaan, size: AppTheme.ikonSedang),
+                      child: Icon(Icons.add, color: AppTheme.warnaPermukaan, size: AppTheme.ikonSedang),
                     ),
                   ),
                 ),

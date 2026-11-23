@@ -11,6 +11,8 @@ Future<String?> tampilkanDialogUbahHargaAwal(
   required double hargaAwal,
   required double batasBawah,
   required double batasAtas,
+  double? hargaNormal,
+  double? hargaMinimum,
 }) {
   return showDialog<String>(
     context: context,
@@ -18,6 +20,8 @@ Future<String?> tampilkanDialogUbahHargaAwal(
       hargaAwal: hargaAwal,
       batasBawah: batasBawah,
       batasAtas: batasAtas,
+      hargaNormal: hargaNormal,
+      hargaMinimum: hargaMinimum,
     ),
   );
 }
@@ -26,11 +30,15 @@ class _DialogUbahHargaAwal extends StatefulWidget {
   final double hargaAwal;
   final double batasBawah;
   final double batasAtas;
+  final double? hargaNormal;
+  final double? hargaMinimum;
 
   const _DialogUbahHargaAwal({
     required this.hargaAwal,
     required this.batasBawah,
     required this.batasAtas,
+    this.hargaNormal,
+    this.hargaMinimum,
   });
 
   @override
@@ -50,7 +58,22 @@ class _DialogUbahHargaAwalState extends State<_DialogUbahHargaAwal> {
   @override
   Widget build(BuildContext context) {
     final double? nilaiInput = double.tryParse(hargaAwalController.text);
-    final bool diLuarRentang = nilaiInput != null &&
+
+    String? pesanKesalahan;
+    if (nilaiInput != null) {
+      if (widget.hargaNormal != null && nilaiInput > widget.hargaNormal!) {
+        pesanKesalahan =
+            'Harga tidak boleh melebihi harga normal (${ListingModel.formatRupiah(widget.hargaNormal!)})';
+      } else if (widget.hargaMinimum != null &&
+          nilaiInput < widget.hargaMinimum!) {
+        pesanKesalahan =
+            'Harga tidak boleh kurang dari batas minimum (${ListingModel.formatRupiah(widget.hargaMinimum!)})';
+      }
+    }
+
+    final bool adaKesalahan = pesanKesalahan != null;
+    final bool diLuarRentang = !adaKesalahan &&
+        nilaiInput != null &&
         (nilaiInput < widget.batasBawah || nilaiInput > widget.batasAtas);
 
     return AlertDialog(
@@ -76,15 +99,26 @@ class _DialogUbahHargaAwalState extends State<_DialogUbahHargaAwal> {
                 color: AppTheme.warnaUtama,
               ),
             ),
+            if (widget.hargaNormal != null || widget.hargaMinimum != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                'Batas lelang: ${widget.hargaMinimum != null ? ListingModel.formatRupiah(widget.hargaMinimum!) : "Rp0"} s/d ${widget.hargaNormal != null ? ListingModel.formatRupiah(widget.hargaNormal!) : "Harga Normal"}',
+                style: const TextStyle(
+                  fontSize: AppTheme.fontKecil,
+                  color: AppTheme.warnaTeksRedup,
+                ),
+              ),
+            ],
             const SizedBox(height: AppTheme.jarakSedang),
             TextField(
               controller: hargaAwalController,
               keyboardType: TextInputType.number,
               // setState di sini supaya peringatan rentang ikut berubah saat mengetik.
               onChanged: (_) => setState(() {}),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Harga Mulai Lelang (Rp)',
                 prefixText: 'Rp ',
+                errorText: pesanKesalahan,
               ),
             ),
             if (diLuarRentang) ...[
@@ -100,7 +134,9 @@ class _DialogUbahHargaAwalState extends State<_DialogUbahHargaAwal> {
           child: const Text('Batal'),
         ),
         FilledButton(
-          onPressed: () => Navigator.pop(context, hargaAwalController.text),
+          onPressed: (adaKesalahan || nilaiInput == null || nilaiInput <= 0)
+              ? null
+              : () => Navigator.pop(context, hargaAwalController.text),
           child: const Text('Simpan'),
         ),
       ],

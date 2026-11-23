@@ -15,9 +15,9 @@ import '../../widgets/kartu_stok_kedaluwarsa.dart';
 import '../auth/login_screen.dart';
 import '../shared/orders_screen.dart';
 import 'listing_detail_screen.dart';
-import 'upload_invoice_screen.dart';
+import 'listing_form_screen.dart';
 
-// Tab Dasbor (penjual): header usaha, 4 angka ringkasan, tombol upload faktur,
+// Tab Dasbor (penjual): header usaha, 4 angka ringkasan, tombol upload stok,
 // pesanan yang perlu disiapkan, dan stok yang segera kedaluwarsa (T5).
 // Data: ambilProfil + ambilInventaris + ambilDaftarPesanan lewat satu FutureBuilder.
 // setState: saat ditarik ke bawah atau kembali dari layar lain (_muatUlang).
@@ -81,7 +81,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _bukaUploadStok() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const UploadInvoiceScreen()),
+      MaterialPageRoute(builder: (context) => const ListingFormScreen()),
     );
     if (!mounted) return;
     await _muatUlang();

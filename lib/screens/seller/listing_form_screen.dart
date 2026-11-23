@@ -3,7 +3,6 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 
 import '../../models/draft_listing_model.dart';
-import '../../models/invoice_result_model.dart';
 import '../../models/listing_model.dart';
 import '../../models/price_advice_model.dart';
 import '../../services/api_service.dart';
@@ -19,14 +18,13 @@ import '../../widgets/kartu_rekomendasi_harga.dart';
 import '../../widgets/pilih_foto.dart';
 import '../auth/login_screen.dart';
 
-// Upload stok langkah 2 & 3 (penjual):
-// Langkah 2: Data Produk (form OCR / manual / draf lokal)
-// Langkah 3: Review Data, Ubah Harga Awal Manual, & Terbitkan (T7)
+// Upload stok (penjual):
+// Langkah 1: Data Produk (form manual / draf lokal)
+// Langkah 2: Review Data, Rekomendasi Harga, & Terbitkan (T7)
 class ListingFormScreen extends StatefulWidget {
-  final InvoiceItemModel? itemFaktur;
   final DraftListingModel? draft;
 
-  const ListingFormScreen({super.key, this.itemFaktur, this.draft});
+  const ListingFormScreen({super.key, this.draft});
 
   @override
   State<ListingFormScreen> createState() => _ListingFormScreenState();
@@ -62,22 +60,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     super.initState();
     nomorBatchController.text =
         'LOT-${DateTime.now().millisecondsSinceEpoch % 100000}';
-    final InvoiceItemModel? item = widget.itemFaktur;
     final DraftListingModel? draft = widget.draft;
-    if (item != null) {
-      namaController.text = item.namaProduk;
-      merekController.text = item.merek ?? '';
-      jumlahController.text = '${item.jumlah}';
-      hargaNormalController.text = item.hargaNormal.round().toString();
-      hargaMinimumController.text = (item.hargaNormal * 0.3).round().toString();
-      if (FormDataProduk.daftarKategori.contains(item.kategori)) {
-        _kategori = item.kategori;
-      }
-      if (FormDataProduk.daftarSatuan.contains(item.satuan)) {
-        _satuan = item.satuan;
-      }
-      _aturTanggal(item.tanggalKedaluwarsa);
-    } else if (draft != null) {
+    if (draft != null) {
       namaController.text = draft.namaProduk;
       merekController.text = draft.merek ?? '';
       jumlahController.text = draft.jumlah > 0 ? '${draft.jumlah}' : '';
@@ -208,6 +192,8 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
       hargaAwal: hargaAwalSekarang,
       batasBawah: _saranHarga!.batasBawah ?? (_saranHarga!.hargaSaran * 0.8),
       batasAtas: _saranHarga!.batasAtas ?? (_saranHarga!.hargaSaran * 1.2),
+      hargaNormal: _draftServer!.hargaNormal,
+      hargaMinimum: _draftServer!.hargaMinimum,
     );
 
     if (teksHarga == null || !mounted) return;
@@ -216,6 +202,30 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
     if (hargaBaru == null || hargaBaru <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Masukkan angka harga yang valid')),
+      );
+      return;
+    }
+
+    if (hargaBaru > _draftServer!.hargaNormal) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Harga awal tidak boleh melebihi harga normal (${ListingModel.formatRupiah(_draftServer!.hargaNormal)})',
+          ),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
+      );
+      return;
+    }
+
+    if (hargaBaru < _draftServer!.hargaMinimum) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Harga awal tidak boleh kurang dari batas minimum (${ListingModel.formatRupiah(_draftServer!.hargaMinimum)})',
+          ),
+          backgroundColor: AppTheme.warnaGalat,
+        ),
       );
       return;
     }
@@ -280,7 +290,7 @@ class _ListingFormScreenState extends State<ListingFormScreen> {
   Widget build(BuildContext context) {
     final bool tahapForm = _draftServer == null;
     return Scaffold(
-      appBar: AppBarUpload(langkahAktif: tahapForm ? 2 : 3),
+      appBar: AppBarUpload(langkahAktif: tahapForm ? 1 : 2),
       body: tahapForm
           ? _buatForm()
           : IsiTahapTerbit(
