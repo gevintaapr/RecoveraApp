@@ -7,14 +7,11 @@ import '../../services/local_db_service.dart';
 import '../../services/location_service.dart';
 import '../../services/sensor_service.dart';
 import '../../services/session_service.dart';
-import '../../theme/app_theme.dart';
 import '../../widgets/baris_cari_kategori.dart';
+import '../../widgets/daftar_katalog.dart';
 import '../../widgets/empty_state.dart';
 import '../../widgets/filter_sheet.dart';
 import '../../widgets/header_katalog.dart';
-import '../../widgets/judul_bagian.dart';
-import '../../widgets/label_data_offline.dart';
-import '../../widgets/listing_card.dart';
 import '../../widgets/pil_filter_aktif.dart';
 import '../auth/login_screen.dart';
 import 'listing_detail_screen.dart';
@@ -267,53 +264,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                   onTombolDitekan: sesiBerakhir ? () => kembaliKeLogin(context) : _muatUlang,
                 );
               }
-              final List<ListingModel> daftarListing = snapshot.data ?? [];
-              return Column(
-                children: [
-                  if (_dataOffline) const LabelDataOffline(),
-                  Expanded(child: _daftarKatalog(context, daftarListing)),
-                ],
+              return DaftarKatalog(
+                daftarListing: snapshot.data ?? [],
+                dataOffline: _dataOffline,
+                urutTerdekat: _filter.urutan == 'nearest',
+                onMuatUlang: _muatUlang,
+                onBukaDetail: _bukaDetail,
+                onHargaTurun: _perbaruiHarga,
               );
             },
           ),
         ),
       ],
-    );
-  }
-
-  Widget _daftarKatalog(BuildContext context, List<ListingModel> daftarListing) {
-    return RefreshIndicator(
-      onRefresh: _muatUlang,
-      child: ListView(
-        // Jarak bawah = tinggi bar navigasi kaca (extendBody) + jarak biasa.
-        padding: EdgeInsets.fromLTRB(
-          AppTheme.jarakTepi,
-          AppTheme.jarakMini,
-          AppTheme.jarakTepi,
-          MediaQuery.paddingOf(context).bottom + AppTheme.jarakSedang,
-        ),
-        children: [
-          JudulBagian(
-            ikon: Icons.radar_rounded,
-            judul: _filter.urutan == 'nearest' ? 'Rekomendasi Terdekat' : 'Daftar Produk',
-            teksKanan: '${daftarListing.length} Produk',
-          ),
-          if (daftarListing.isEmpty)
-            const Padding(
-              padding: EdgeInsets.only(top: AppTheme.jarakBesar),
-              child: EmptyState(
-                ikon: Icons.search_off,
-                pesan: 'Tidak ada lelang yang cocok.\nUbah kata kunci atau hapus filter di atas.',
-              ),
-            )
-          else
-            ...daftarListing.map((listing) => ListingCard(
-                  listing: listing,
-                  onTap: () => _bukaDetail(listing),
-                  onHargaTurun: _perbaruiHarga,
-                )),
-        ],
-      ),
     );
   }
 }
